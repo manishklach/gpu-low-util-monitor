@@ -18,16 +18,22 @@ LOGGER = logging.getLogger(__name__)
 def build_parser() -> argparse.ArgumentParser:
     """Create the CLI argument parser."""
     parser = argparse.ArgumentParser(
-        description="Monitor low-utilization time and idle-state behavior on NVIDIA datacenter GPUs."
+        description="Monitor low-utilization time and idle-state behavior on NVIDIA datacenter GPUs.",
+        epilog=(
+            "This tool measures low-utilization and idle-state behavior over time using documented "
+            "NVIDIA signals. It provides a practical proxy for GPU underuse, workload starvation, "
+            "or underfeeding, but it should not claim omniscient knowledge of economic waste or "
+            "all causes of low activity."
+        ),
     )
     parser.add_argument("--interval", type=float, default=1.0, help="Polling interval in seconds.")
-    parser.add_argument("--window-short", type=int, default=60, help="Short rolling window in seconds.")
-    parser.add_argument("--window-long", type=int, default=1200, help="Long rolling window in seconds.")
+    parser.add_argument("--window-short", type=int, default=60, help="Short rolling window in seconds, typically 60.")
+    parser.add_argument("--window-long", type=int, default=1200, help="Long rolling window in seconds, typically 1200.")
     parser.add_argument("--out-dir", type=Path, default=Path("./out"), help="Output directory for JSONL and CSV.")
     parser.add_argument("--jsonl", action="store_true", help="Write one JSONL row per GPU sample with rolling summaries.")
     parser.add_argument("--csv", action="store_true", help="Write periodic rolling-summary CSV snapshots.")
     parser.add_argument("--console-refresh", type=float, default=10.0, help="Console refresh interval in seconds.")
-    parser.add_argument("--once", action="store_true", help="Run a single sampling pass for debug validation.")
+    parser.add_argument("--once", action="store_true", help="Run a single sampling pass to validate field availability and current state.")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging.")
     parser.add_argument("--prometheus-port", type=int, default=None, help="Serve current rolling summaries as Prometheus gauges.")
     parser.add_argument("--simulate", action="store_true", help="Use the fake NVML backend for local simulation.")

@@ -155,7 +155,15 @@ class RealNVMLBackend:
         )
 
     def _read_low_util_counter_ns(self, handle: object) -> int:
-        """Read the documented low-utilization perf-policy counter."""
+        """Read the documented low-utilization perf-policy counter.
+
+        NVML exposes the field through `nvmlDeviceGetFieldValues` without an explicit
+        unit annotation in the field-id enum docs. The implementation normalizes the
+        returned value to nanoseconds for the rolling-window math used elsewhere in
+        the repository, matching the time-based semantics of NVML perf-policy
+        violation data. Operators should validate the observed scale on their target
+        driver branch during hardware bring-up.
+        """
         pynvml = self._pynvml
         assert pynvml is not None
         values = pynvml.nvmlDeviceGetFieldValues(handle, [pynvml.NVML_FI_DEV_PERF_POLICY_LOW_UTILIZATION])
@@ -165,7 +173,12 @@ class RealNVMLBackend:
         return int(field_value.value.uiVal) * 1000
 
     def _read_idle_reason(self, handle: object) -> bool:
-        """Read whether the Idle clocks-event reason is active."""
+        """Read whether the Idle clocks-event reason is active.
+
+        This is a sampled instantaneous state, not a cumulative timer. NVIDIA also
+        documents that Idle-related clock-event reporting may be deprecated in future
+        releases, so callers must tolerate this signal being unavailable.
+        """
         pynvml = self._pynvml
         assert pynvml is not None
         if hasattr(pynvml, "nvmlDeviceGetCurrentClocksEventReasons"):

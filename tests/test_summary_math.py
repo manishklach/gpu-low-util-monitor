@@ -32,4 +32,7 @@ def test_multi_gpu_collection_and_formatting(tmp_path: Path) -> None:
     csv_text = (tmp_path / "gpu_summary.csv").read_text(encoding="utf-8")
 
     assert '"gpu_index":0' in jsonl_text
+    assert '"summary_60s"' in jsonl_text
+    assert '"availability"' in jsonl_text
     assert "window_seconds" in csv_text
+    assert "low_util_pct_window" in csv_text

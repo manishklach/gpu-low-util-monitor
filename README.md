@@ -4,16 +4,18 @@
 
 ## Why This Exists
 
-Datacenter GPUs are expensive, and operators often need a defensible answer to a narrower question than "was this GPU worth the money?": did the GPU spend a meaningful fraction of recent wall time in a documented low-utilization policy state, appear idle at sample times, or bounce in and out of idle episodes that suggest bursty or underfed work? This repository exists to make that rolling-window view easy to collect, export, and validate.
+Datacenter GPUs are expensive, and operators often need a defensible answer to a narrower question than "was this GPU kept busy enough recently?" This repository exists to measure a careful subset of observables: documented low-utilization policy time, sampled Idle-state presence, software-derived Idle entries, and supporting telemetry that helps interpret likely underfeeding, bursty dispatch, or near-idle behavior over rolling windows.
 
 ## What It Measures
 
 The collector uses NVIDIA NVML as the primary source of truth and relies only on documented fields and APIs:
 
 1. `NVML_FI_DEV_PERF_POLICY_LOW_UTILIZATION`
-2. Current clocks event reasons bitmask, to detect whether the documented `Idle` reason is active at the current sample
-3. Standard telemetry:
-   GPU utilization, SM clock, memory clock when available, power draw, GPU name, UUID, and index
+   This is treated as the authoritative cumulative low-utilization policy signal.
+2. Current clocks event reasons bitmask
+   This is sampled to determine whether the documented `Idle` reason is active at the poll instant.
+3. Standard telemetry
+   GPU utilization, SM clock, memory clock when available, power draw, GPU name, UUID, and index.
 
 Headline KPI:
 
@@ -43,7 +45,7 @@ Implementation notes:
 - Derived from deltas of the cumulative `NVML_FI_DEV_PERF_POLICY_LOW_UTILIZATION` counter
 - Uses monotonic time for elapsed-time math
 - Clamped to `[0, 100]`
-- Counter resets or negative deltas are treated defensively and do not contribute positive time
+- Counter resets or negative deltas are treated defensively and never contribute misleading negative time
 
 Interpretation:
 
@@ -60,7 +62,7 @@ Formula:
 Implementation notes:
 
 - Based on polling the current clocks event reasons bitmask at each sample
-- Represents sampled idle-state presence, not a cumulative hardware timer
+- Represents sampled state presence, not a cumulative hardware timer
 
 Interpretation:
 
@@ -78,25 +80,26 @@ Implementation notes:
 
 Interpretation:
 
-- High `idle_entries_20m` suggests bursty or intermittent dispatch, especially when paired with non-trivial `low_util_pct_20m`
+- High `idle_entries_20m` suggests bursty or intermittent dispatch
 
-### `avg_gpu_util_window`
+### Supporting Metrics
 
-`avg_gpu_util_window` is a time-weighted average of sampled GPU utilization across the window.
+- `avg_gpu_util_window`
+- `avg_sm_clock_mhz_window`
+- `avg_mem_clock_mhz_window`
+- `avg_power_w_window`
 
-Interpretation:
-
-- Supporting context only, not the headline KPI
+These are supporting context, not the headline KPI.
 
 ### Distinctions That Matter
 
 This repository explicitly distinguishes:
 
-- low-utilization policy time: cumulative documented perf-policy counter behavior
-- current sampled Idle reason: point-in-time state observed at each poll
-- software-derived idle entry counts: userland transition counts computed from polling
+- cumulative low-utilization policy time
+- current sampled Idle state
+- software-derived idle entry counts
 
-These are not interchangeable metrics.
+These are related but not interchangeable signals.
 
 ## Interpretation Guidance
 
@@ -116,13 +119,13 @@ Common interpretations:
 
 ## Limitations
 
-- This tool does not claim universal truth about "underutilization" or economic waste
+- The Idle event reason may be deprecated or removed in future NVIDIA releases
 - Low-utilization is not identical to zero work
-- Underfeeding can come from many causes: host stalls, bubbles, synchronization gaps, small batches, bursty scheduling, and other pipeline effects
+- Underfeeding can come from many causes: host stalls, bubbles, sync gaps, small batches, bursty scheduling, and other pipeline effects
 - `idle_entries_window` is derived in software by polling `Idle` transitions, not provided directly by NVIDIA
 - Polling interval affects how many short idle episodes are observed
-- The idle event reason API may be deprecated or changed in future NVIDIA releases
 - This tool measures observables, not root-cause certainty
+- The normalization of the low-utilization counter should still be validated on the target driver branch during hardware bring-up
 
 ## How It Works
 
@@ -153,7 +156,7 @@ Simulation only:
 pip install -e ".[dev]"
 ```
 
-With Prometheus exporter support:
+With optional Prometheus exporter support:
 
 ```bash
 pip install -e ".[dev,prometheus]"
@@ -248,15 +251,15 @@ gpu idx | name | low_util_1m | low_util_20m | idle_pct_1m | idle_pct_20m | idle_
 
 ### JSONL
 
-See [examples/sample_output.jsonl](/Users/ManishKL/Documents/Playground/gpu-low-util-monitor/examples/sample_output.jsonl).
+See [examples/sample_output.jsonl](examples/sample_output.jsonl).
 
 ### CSV
 
-See [examples/sample_summary.csv](/Users/ManishKL/Documents/Playground/gpu-low-util-monitor/examples/sample_summary.csv).
+See [examples/sample_summary.csv](examples/sample_summary.csv).
 
 ## Prometheus Metrics
 
-If `--prometheus-port` is set, the exporter publishes:
+If `--prometheus-port` is set and `prometheus-client` is installed, the exporter publishes:
 
 - `gpu_low_util_pct_1m`
 - `gpu_low_util_pct_20m`
@@ -288,3 +291,18 @@ Simulation mode is intended for development, metric validation, and documentatio
 - Add summary snapshots and fleet-level aggregation helpers
 - Add examples for correlating low-utilization time with scheduler and input-pipeline telemetry
 - Add more hardware validation notes for future NVIDIA datacenter GPUs
+
+## References
+
+- NVIDIA NVML API Reference Guide: [docs.nvidia.com/deploy/nvml-api](https://docs.nvidia.com/deploy/nvml-api/index.html)
+- NVML field value enums and field IDs: [group__nvmlFieldValueEnums.html](https://docs.nvidia.com/deploy/nvml-api/group__nvmlFieldValueEnums.html)
+- NVML clocks event reasons: [group__nvmlClocksEventReasons.html](https://docs.nvidia.com/deploy/nvml-api/group__nvmlClocksEventReasons.html)
+- NVIDIA `nvidia-smi` documentation: [docs.nvidia.com/deploy/nvidia-smi](https://docs.nvidia.com/deploy/nvidia-smi/index.html)
+
+These references are the basis for the repository's semantics:
+
+- NVML is the underlying management interface used by `nvidia-smi`
+- `NVML_FI_DEV_PERF_POLICY_LOW_UTILIZATION` is used as the primary low-utilization policy signal
+- Idle is treated as a current sampled event reason, not a cumulative timer
+- NVIDIA documents that Idle-related event reporting may be deprecated in future releases
+- `nvidia-smi` exposes clocks event reasons and clocks event reason counters, which helps operators validate related signals on target hosts
