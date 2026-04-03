@@ -84,7 +84,7 @@
         "name": "How is this different from DCGM?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "This repository is NVML-first today. That makes it a direct fit anywhere nvidia-smi and NVML are already available. DCGM is still relevant for fleet aggregation and managed environments, which is why it appears in the roadmap and references, but you do not need to wait for DCGM support to use the current tool."
+          "text": "This repository is still NVML-first, but it now also supports an optional DCGM exporter ingest mode. NVML remains the higher-fidelity path for the headline low-utilization and sampled Idle-state signals. DCGM mode is useful in environments that already expose documented DCGM metrics, but it is intentionally degraded where those NVML-specific behavioral signals do not map cleanly."
         }
       },
       {
@@ -268,16 +268,23 @@
     }
 
     .visual {
-      margin: 26px 0;
-      padding: 14px;
+      margin: 24px 0 28px;
+      padding: 16px;
       border-radius: 20px;
       background: var(--panel);
       border: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
     }
 
     .visual img {
       display: block;
       width: 100%;
+      max-width: 820px;
+      height: auto;
+      margin: 0 auto;
       border-radius: 14px;
     }
 
@@ -330,6 +337,17 @@
 
     ul {
       padding-left: 1.2rem;
+    }
+
+    @media (max-width: 720px) {
+      .visual {
+        padding: 10px;
+        border-radius: 16px;
+      }
+
+      .visual img {
+        border-radius: 10px;
+      }
     }
   </style>
 </head>
@@ -524,7 +542,7 @@
         The repository becomes much more tangible once you look at a real summary row. Here is the same style of
         console snapshot used in the README, showing a dimmer H100 beside a bright busy H200:
       </p>
-      <pre><code>gpu idx | name | low_util_short(1m) | low_util_long(20m) | idle_pct_short(1m) | idle_pct_long(20m) | idle_entries_long(20m) | current_power_w | avg_power_short(1m) | avg_power_long(20m) | power_pct_cap_long(20m) | power_activity_long(20m) | util_long(20m) | sm_clk_long(20m)
+      <pre><code>gpu idx | name | low_util_short(default 60s) | low_util_long(default 1200s) | idle_pct_short(default 60s) | idle_pct_long(default 1200s) | idle_entries_long(default 1200s) | current_power_w | avg_power_short(default 60s) | avg_power_long(default 1200s) | power_pct_cap_long(default 1200s) | power_activity_long(default 1200s) | util_long(default 1200s) | sm_clk_long(default 1200s)
 0 | NVIDIA H100 80GB HBM3 | 65.8 | 67.1 | 30.5 | 33.2 | 49 | 212.0 | 218.6 | 216.1 | 30.9 | 22.0 | 27.4 | 1008.8
 1 | NVIDIA H200 141GB HBM3e | 2.0 | 2.0 | 0.0 | 0.0 | 0 | 662.0 | 662.0 | 662.0 | 94.6 | 93.9 | 96.0 | 1830.0</code></pre>
       <p>
@@ -597,9 +615,10 @@ python -m gpu_low_util_monitor --simulate --once --verbose</code></pre>
       <div class="faq-item">
         <h3>How is this different from DCGM?</h3>
         <p>
-          This repository is NVML-first today. That makes it a direct fit anywhere <code>nvidia-smi</code> and NVML
-          are already available. DCGM is still relevant for fleet aggregation and managed environments, which is why it
-          appears in the roadmap and references, but you do not need to wait for DCGM support to use the current tool.
+          This repository is still NVML-first, but it now also supports an optional DCGM exporter ingest mode. NVML
+          remains the higher-fidelity path for the headline low-utilization and sampled Idle-state signals. DCGM mode
+          is useful in environments that already expose documented DCGM metrics, but it is intentionally degraded where
+          those NVML-specific behavioral signals do not map cleanly.
         </p>
       </div>
 
