@@ -16,45 +16,45 @@
     <tspan x="72" dy="46">dark, dim, and underfed GPUs</tspan>
   </text>
 
-  <rect x="72" y="180" width="320" height="196" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
-  <text x="100" y="224" fill="#7cc4ff" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Signals In</text>
-  <text x="100" y="268" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">NVML or DCGM exporter</text>
-  <text x="100" y="304" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Low-utilization policy time</text>
-  <text x="100" y="336" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Idle-state sampling</text>
-  <text x="100" y="368" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Power and energy telemetry</text>
+  <rect x="72" y="190" width="320" height="196" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
+  <text x="100" y="234" fill="#7cc4ff" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Signals In</text>
+  <text x="100" y="278" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">NVML or DCGM exporter</text>
+  <text x="100" y="314" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Low-utilization policy time</text>
+  <text x="100" y="346" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Idle-state sampling</text>
+  <text x="100" y="378" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Power and energy telemetry</text>
 
-  <rect x="478" y="180" width="324" height="196" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
-  <text x="506" y="224" fill="#7cc4ff" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Rolling Windows</text>
-  <text x="506" y="268" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">
+  <rect x="478" y="190" width="324" height="196" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
+  <text x="506" y="234" fill="#7cc4ff" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Rolling Windows</text>
+  <text x="506" y="278" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">
     <tspan x="506" dy="0">Configurable short and</tspan>
     <tspan x="506" dy="28">long windows</tspan>
   </text>
-  <text x="506" y="304" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Low-util percentage</text>
-  <text x="506" y="336" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Idle sampled percentage and entries</text>
-  <text x="506" y="368" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Power and thermal corroboration</text>
+  <text x="506" y="334" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Low-util percentage</text>
+  <text x="506" y="366" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Idle sampled percentage and entries</text>
+  <text x="506" y="398" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Power and thermal corroboration</text>
 
-  <rect x="888" y="180" width="320" height="196" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
-  <text x="916" y="224" fill="#7cc4ff" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Operator View</text>
-  <text x="916" y="268" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">
+  <rect x="888" y="190" width="320" height="196" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
+  <text x="916" y="234" fill="#7cc4ff" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Operator View</text>
+  <text x="916" y="278" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">
     <tspan x="916" dy="0">Long-window low-util is</tspan>
     <tspan x="916" dy="28">the headline KPI</tspan>
   </text>
-  <text x="916" y="304" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Dark / dim / bright heuristics</text>
-  <text x="916" y="336" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Likely underfeeding or burstiness</text>
-  <text x="916" y="368" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Not a guaranteed root-cause engine</text>
+  <text x="916" y="334" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Dark / dim / bright heuristics</text>
+  <text x="916" y="366" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Likely underfeeding or burstiness</text>
+  <text x="916" y="398" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Not a guaranteed root-cause engine</text>
 
-  <path d="M392 278 L478 278" stroke="#7cc4ff" stroke-width="6" stroke-linecap="round"/>
-  <polygon points="478,278 460,268 460,288" fill="#7cc4ff"/>
-  <path d="M802 278 L888 278" stroke="#7cc4ff" stroke-width="6" stroke-linecap="round"/>
-  <polygon points="888,278 870,268 870,288" fill="#7cc4ff"/>
+  <path d="M392 288 L478 288" stroke="#7cc4ff" stroke-width="6" stroke-linecap="round"/>
+  <polygon points="478,288 460,278 460,298" fill="#7cc4ff"/>
+  <path d="M802 288 L888 288" stroke="#7cc4ff" stroke-width="6" stroke-linecap="round"/>
+  <polygon points="888,288 870,278 870,298" fill="#7cc4ff"/>
 
-  <rect x="72" y="446" width="1136" height="182" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
-  <text x="104" y="492" fill="#9bffcf" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">At a glance</text>
-  <text x="104" y="538" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">
+  <rect x="72" y="456" width="1136" height="182" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
+  <text x="104" y="502" fill="#9bffcf" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">At a glance</text>
+  <text x="104" y="548" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">
     <tspan x="104" dy="0">Standard monitoring can show a GPU as moderately busy while rolling windows reveal</tspan>
     <tspan x="104" dy="34">high low-utilization time, repeated idle entries, and dim power.</tspan>
   </text>
-  <text x="104" y="610" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="23">
+  <text x="104" y="620" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="23">
     <tspan x="104" dy="0">That is the value proposition: not omniscient truth, but a practical observability layer</tspan>
     <tspan x="104" dy="32">for NVIDIA H100, H200, and similar datacenter GPUs.</tspan>
   </text>
