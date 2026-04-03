@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>How to Measure GPU Underutilization on NVIDIA H100 and H200</title>
+  <meta
+    name="description"
+    content="Learn how to detect low-utilization, idle-state behavior, and power-based GPU activity on NVIDIA H100/H200 using NVML, nvidia-smi, and rolling-window telemetry."
+  />
+  <meta
+    name="keywords"
+    content="GPU underutilization,NVIDIA H100 monitoring,NVIDIA H200 monitoring,NVML low utilization,GPU idle state monitoring,gpu-low-util-monitor,nvidia-smi utilization,GPU power draw monitoring,GPU observability,datacenter GPU monitoring"
+  />
+  <meta name="author" content="Manish Lachwani" />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://manishklach.github.io/gpu-low-util-monitor/" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="How to Measure GPU Underutilization on NVIDIA H100 and H200" />
+  <meta
+    property="og:description"
+    content="Detect low-utilization, idle-state behavior, and power-based GPU activity on NVIDIA H100/H200 using NVML, nvidia-smi, and rolling-window telemetry."
+  />
+  <meta property="og:url" content="https://manishklach.github.io/gpu-low-util-monitor/" />
+  <meta property="og:site_name" content="Manish Lachwani" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="How to Measure GPU Underutilization on NVIDIA H100 and H200" />
+  <meta
+    name="twitter:description"
+    content="Point-in-time GPU busy metrics miss a lot. Rolling-window low-util time, sampled idle state, and power draw tell a much better story."
+  />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "How to Measure GPU Underutilization on NVIDIA H100 and H200",
+    "description": "Learn how to detect low-utilization, idle-state behavior, and power-based GPU activity on NVIDIA H100/H200 using NVML, nvidia-smi, and rolling-window telemetry.",
+    "author": {
+      "@type": "Person",
+      "name": "Manish Lachwani"
+    },
+    "publisher": {
+      "@type": "Person",
+      "name": "Manish Lachwani"
+    },
+    "mainEntityOfPage": "https://manishklach.github.io/gpu-low-util-monitor/"
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #111831;
+      --panel-2: #17203f;
+      --text: #e8ecf8;
+      --muted: #afbbd8;
+      --accent: #7cc4ff;
+      --accent-2: #9bffcf;
+      --border: #2a355d;
+      --code: #0e1530;
+      --maxw: 860px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #08101d 0%, #0b1020 100%);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    .wrap {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 32px 20px 72px;
+    }
+
+    .hero {
+      padding: 28px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(23,32,63,0.96), rgba(17,24,49,0.96));
+      box-shadow: 0 20px 60px rgba(0,0,0,0.28);
+    }
+
+    .eyebrow {
+      display: inline-block;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+      margin-bottom: 14px;
+      font-weight: 700;
+    }
+
+    h1, h2, h3 {
+      line-height: 1.15;
+      margin: 0 0 16px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      letter-spacing: -0.03em;
+    }
+
+    h2 {
+      margin-top: 40px;
+      font-size: 1.7rem;
+      letter-spacing: -0.02em;
+    }
+
+    h3 {
+      margin-top: 28px;
+      font-size: 1.18rem;
+    }
+
+    p, li {
+      color: var(--text);
+      font-size: 1.02rem;
+    }
+
+    .sub {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 760px;
+    }
+
+    .meta {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 11px 16px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      transition: 0.2s ease;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: #07101f;
+      border-color: transparent;
+    }
+
+    .btn.secondary {
+      color: var(--text);
+      background: transparent;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      opacity: 0.96;
+    }
+
+    .section {
+      margin-top: 28px;
+      padding: 4px 2px;
+    }
+
+    .callout {
+      margin: 24px 0;
+      padding: 18px 18px;
+      border-radius: 18px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin: 22px 0;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .card h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    code, pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    pre {
+      background: var(--code);
+      border: 1px solid var(--border);
+      color: #dbe7ff;
+      padding: 16px;
+      border-radius: 16px;
+      overflow-x: auto;
+      line-height: 1.55;
+      font-size: 0.94rem;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    blockquote {
+      margin: 22px 0;
+      padding: 10px 18px;
+      border-left: 4px solid var(--accent);
+      color: var(--muted);
+      background: rgba(124,196,255,0.06);
+      border-radius: 0 14px 14px 0;
+    }
+
+    .faq-item {
+      margin-bottom: 22px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .footer {
+      margin-top: 56px;
+      padding-top: 22px;
+      color: var(--muted);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 0.95rem;
+    }
+
+    .small {
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    ul {
+      padding-left: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div class="eyebrow">GPU Observability · NVML · H100/H200</div>
+      <h1>How to Measure GPU Underutilization on NVIDIA H100 and H200</h1>
+      <p class="sub">
+        Point-in-time GPU busy metrics miss a lot. Rolling-window low-utilization time,
+        sampled idle-state behavior, and power draw tell a much better story about
+        whether an expensive GPU is actually doing meaningful work over time.
+      </p>
+      <div class="meta">
+        By Manish Lachwani · Open-source observability for NVIDIA datacenter GPUs
+      </div>
+      <div class="cta-row">
+        <a class="btn primary" href="https://github.com/manishklach/gpu-low-util-monitor" target="_blank" rel="noopener noreferrer">
+          View the repo
+        </a>
+        <a class="btn secondary" href="#what-it-measures">
+          Jump to metrics
+        </a>
+      </div>
+    </section>
+
+    <section class="section">
+      <p>
+        If you run expensive NVIDIA GPUs, the real question is rarely just
+        "is the job scheduled?" It is: <strong>is the GPU actually doing meaningful work over time?</strong>
+      </p>
+      <p>
+        That is the idea behind
+        <a href="https://github.com/manishklach/gpu-low-util-monitor" target="_blank" rel="noopener noreferrer">gpu-low-util-monitor</a>,
+        a Linux-first observability tool aimed initially at NVIDIA datacenter GPUs such as
+        H100 and H200. The repo measures low-utilization time, idle-state behavior,
+        and power-based activity over rolling windows using documented NVIDIA signals,
+        with the long-window low-utilization percentage as the headline KPI.
+      </p>
+
+      <div class="callout">
+        This is the right framing: not a magical truth engine, not an exact billing-waste meter,
+        but a practical rolling-window observability signal grounded in documented NVIDIA behavior.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Why point-in-time GPU utilization is not enough</h2>
+      <p>
+        A GPU can look "busy enough" in a snapshot while still spending a meaningful share of
+        the last few minutes drifting into low-utilization policy, bouncing in and out of idle,
+        or drawing far below expected power. That is why rolling windows matter.
+      </p>
+      <p>
+        Instead of asking "what is the GPU doing right now?", you ask:
+      </p>
+      <ul>
+        <li>How much of the last minute was it in low-utilization policy?</li>
+        <li>How much of the last several minutes did it appear idle at sample times?</li>
+        <li>How often did it enter Idle?</li>
+        <li>Was its power profile dark, dim, or bright over the same period?</li>
+      </ul>
+    </section>
+
+    <section class="section" id="what-it-measures">
+      <h2>What the repo measures</h2>
+      <p>
+        The repository uses NVIDIA NVML as the primary runtime source of truth and focuses on
+        documented low-utilization, idle-state, and power signals:
+      </p>
+      <ul>
+        <li><code>NVML_FI_DEV_PERF_POLICY_LOW_UTILIZATION</code></li>
+        <li>current clocks event reasons, including detection of the documented <code>Idle</code> reason</li>
+        <li>standard telemetry such as GPU utilization, SM clock, memory clock, power draw, power cap, GPU name, UUID, and index</li>
+        <li>cumulative total energy when the runtime path exposes it</li>
+      </ul>
+      <p>
+        The repository treats low-utilization over time as the primary KPI and uses power as a complementary
+        first-order activity indicator rather than a replacement for behavioral telemetry.
+      </p>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Low-utilization policy time</h3>
+          <p>
+            The strongest behavioral signal for how much recent wall time the GPU spent in
+            documented low-utilization policy.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Sampled Idle-state behavior</h3>
+          <p>
+            Shows whether the GPU frequently appeared idle when sampled, and whether work
+            arrived in bursty episodes.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Power-based activity</h3>
+          <p>
+            A first-order dark / dim / bright signal that complements low-util and idle telemetry.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>The core metrics</h2>
+
+      <h3><code>low_util_pct_window</code></h3>
+      <p>
+        The fraction of elapsed wall time in the rolling window during which the documented
+        low-utilization perf-policy counter increased:
+      </p>
+      <pre><code>100 * sum(delta_low_util_counter_ns) / sum(delta_elapsed_ns)</code></pre>
+      <p>
+        It is clamped to <code>[0, 100]</code>, uses monotonic time, and treats counter resets
+        defensively.
+      </p>
+
+      <h3><code>idle_reason_pct_window</code></h3>
+      <p>
+        The fraction of samples in the window where the current <code>Idle</code> clock-event reason was active.
+        This is sampled state presence, not a cumulative hardware timer.
+      </p>
+
+      <h3><code>idle_entries_window</code></h3>
+      <p>
+        A software-derived count of <code>false -&gt; true</code> transitions into Idle state based on polling.
+        NVIDIA does not provide this as a built-in counter through the documented signals used here.
+      </p>
+
+      <h3>Power and energy metrics</h3>
+      <p>
+        The repo now also tracks current power, rolling average power, power as a percentage of cap,
+        optional calibrated power activity, and cumulative energy deltas when available. These are
+        complementary observability signals, not official utilization truth.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>Why power matters</h2>
+      <blockquote>
+        Power tells you that a GPU looks dark or dim; low-util and idle telemetry help explain
+        how often and in what pattern that is happening.
+      </blockquote>
+      <p>
+        That is the most useful way to think about the combined system:
+      </p>
+      <ul>
+        <li><strong>Low power + high long-window low-util</strong> → likely underfed or poorly packed GPU</li>
+        <li><strong>Low power + high long-window sampled Idle</strong> → likely frequently idle at sample times</li>
+        <li><strong>Low power + high long-window idle entries</strong> → likely bursty or intermittent dispatch</li>
+        <li><strong>High power + low long-window low-util</strong> → likely healthy busy GPU</li>
+        <li><strong>High power + high long-window low-util</strong> → investigate; unusual workload shape, calibration issue, or mismatch</li>
+      </ul>
+      <p>
+        Power is especially useful for dark / dim / bright fleet heat-map style observability, but it remains
+        a proxy rather than a perfect root-cause detector.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>What this repo is and is not</h2>
+      <p>
+        This project is compelling because it is specific. It is not "yet another GPU monitor."
+        It is about low-utilization detection, idle-state episodes, power-based activity,
+        and rolling-window observability on NVIDIA datacenter GPUs.
+      </p>
+      <p>
+        It is <strong>not</strong>:
+      </p>
+      <ul>
+        <li>a perfect utilization truth engine</li>
+        <li>an exact cost-loss calculator</li>
+        <li>a complete root-cause analysis system</li>
+      </ul>
+      <p>
+        The current README keeps the right tone: this is a practical proxy for GPU underuse,
+        workload starvation, underfeeding, or dark/dim GPUs, while avoiding claims of omniscient
+        knowledge about economic waste or all causes of low activity.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>Why this matters for H100 and H200</h2>
+      <p>
+        On high-end datacenter GPUs, silent underuse is expensive. Scheduler-level success can hide
+        meaningful low-util time, repeated idle episodes, and dim power behavior. A GPU can be
+        allocated, visible, and "running" while still spending too much of recent wall time not
+        doing enough useful work.
+      </p>
+      <p>
+        That is why rolling-window observability matters more than point-in-time snapshots.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>Try the repo</h2>
+      <p>
+        If you want to detect dark, dim, bursty, or underfed GPUs instead of relying only on
+        point-in-time busy metrics, check out the repository:
+      </p>
+      <pre><code>https://github.com/manishklach/gpu-low-util-monitor</code></pre>
+      <p>
+        It is a strong example of how to talk about GPU underutilization honestly:
+        not as a universal truth claim, but as a rolling-window observability signal
+        grounded in documented NVIDIA behavior.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>FAQ</h2>
+
+      <div class="faq-item">
+        <h3>Is GPU power a good proxy for utilization?</h3>
+        <p>
+          Often yes, as a first-order indicator. Power is especially useful for seeing whether GPUs
+          look dark, dim, or bright across a fleet. But power alone is still a proxy, not perfect truth.
+        </p>
+      </div>
+
+      <div class="faq-item">
+        <h3>What is NVML low-utilization policy?</h3>
+        <p>
+          The repo uses NVIDIA's documented low-utilization perf-policy signal as a key source for
+          rolling-window low-utilization measurement.
+        </p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Can this detect idle GPUs?</h3>
+        <p>
+          Yes, in a practical observability sense. The repo samples the current Idle event reason
+          and derives idle-entry counts from polling, which makes it useful for spotting repeated
+          idle episodes and bursty dispatch patterns.
+        </p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Does this prove exact economic waste?</h3>
+        <p>
+          No. It is a practical proxy for GPU underuse, workload starvation, underfeeding, or dark/dim
+          GPU behavior, not an exact financial truth engine.
+        </p>
+      </div>
+    </section>
+
+    <section class="footer">
+      <p>
+        Repo:
+        <a href="https://github.com/manishklach/gpu-low-util-monitor" target="_blank" rel="noopener noreferrer">
+          manishklach/gpu-low-util-monitor
+        </a>
+      </p>
+      <p class="small">
+        Suggested SEO title: <strong>How to Measure GPU Underutilization on NVIDIA H100 and H200</strong><br />
+        Suggested meta description: Learn how to detect low-utilization, idle-state behavior, and power-based GPU activity on NVIDIA H100/H200 using NVML, nvidia-smi, and rolling-window telemetry.
+      </p>
+    </section>
+  </main>
+</body>
+</html>
