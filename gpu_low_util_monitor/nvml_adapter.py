@@ -35,11 +35,13 @@ class UnsupportedFieldError(RuntimeError):
 class RealNVMLBackend:
     """Documented-NVML backend using `nvidia-ml-py` when available."""
 
-    def __init__(self, fail_on_unsupported: bool = False) -> None:
+    def __init__(self, fail_on_unsupported: bool = False, mig_strategy: str = "auto") -> None:
         self._fail_on_unsupported = fail_on_unsupported
-        self._handles: dict[int, object] = {}
+        self._mig_strategy = mig_strategy
+        self._handles: dict[str, object] = {}
         self._warned_once: set[tuple[int, str]] = set()
         self._pynvml = None
+        self._identities: list[DeviceIdentity] = []
 
     def initialize(self) -> None:
         """Import NVML bindings and initialize the library."""
@@ -54,8 +56,16 @@ class RealNVMLBackend:
             pynvml.nvmlInit()
         except Exception as exc:  # pragma: no cover
             raise RuntimeError(f"Failed to initialize NVML: {exc}") from exc
+        self._identities = []
         for index in range(pynvml.nvmlDeviceGetCount()):
-            self._handles[index] = pynvml.nvmlDeviceGetHandleByIndex(index)
+            handle = pynvml.nvmlDeviceGetHandleByIndex(index)
+            physical_identity = self._build_physical_identity(index, handle)
+            mig_identities = self._enumerate_mig_identities(index, physical_identity, handle)
+            if mig_identities:
+                self._identities.extend(mig_identities)
+            else:
+                self._identities.append(physical_identity)
+                self._handles[physical_identity.uuid] = handle
 
     def shutdown(self) -> None:
         """Shutdown NVML if it was initialized."""
@@ -70,19 +80,14 @@ class RealNVMLBackend:
         """Return visible devices."""
         if self._pynvml is None:
             raise RuntimeError("NVML backend not initialized")
-        identities: list[DeviceIdentity] = []
-        for index, handle in self._handles.items():
-            name = self._decode(self._pynvml.nvmlDeviceGetName(handle))
-            uuid = self._decode(self._pynvml.nvmlDeviceGetUUID(handle))
-            identities.append(DeviceIdentity(index=index, uuid=uuid, name=name))
-        return identities
+        return list(self._identities)
 
     def read_device_sample(self, identity: DeviceIdentity, monotonic_ns: int) -> DeviceSample:
         """Read one GPU sample using documented APIs and field ids."""
         if self._pynvml is None:
             raise RuntimeError("NVML backend not initialized")
         pynvml = self._pynvml
-        handle = self._handles[identity.index]
+        handle = self._handles[identity.uuid]
 
         capabilities = DeviceCapabilities()
 
@@ -321,6 +326,66 @@ class RealNVMLBackend:
     def _decode(value: bytes | str) -> str:
         """Decode NVML byte strings."""
         return value.decode("utf-8") if isinstance(value, bytes) else value
+
+    def _build_physical_identity(self, index: int, handle: object) -> DeviceIdentity:
+        """Build a physical GPU identity from one NVML handle."""
+        assert self._pynvml is not None
+        name = self._decode(self._pynvml.nvmlDeviceGetName(handle))
+        uuid = self._decode(self._pynvml.nvmlDeviceGetUUID(handle))
+        return DeviceIdentity(index=index, uuid=uuid, name=name, entity_kind="gpu")
+
+    def _enumerate_mig_identities(
+        self,
+        index: int,
+        physical_identity: DeviceIdentity,
+        handle: object,
+    ) -> list[DeviceIdentity]:
+        """Enumerate MIG instances for one GPU when MIG reporting is requested and supported."""
+        if self._mig_strategy == "gpu":
+            return []
+        assert self._pynvml is not None
+        pynvml = self._pynvml
+        if not hasattr(pynvml, "nvmlDeviceGetMigMode"):
+            return []
+        try:
+            current_mode, _pending = pynvml.nvmlDeviceGetMigMode(handle)
+        except Exception:
+            return []
+        mig_enabled_value = getattr(pynvml, "NVML_DEVICE_MIG_ENABLE", 1)
+        if int(current_mode) != int(mig_enabled_value):
+            return []
+        if not hasattr(pynvml, "nvmlDeviceGetMaxMigDeviceCount") or not hasattr(
+            pynvml, "nvmlDeviceGetMigDeviceHandleByIndex"
+        ):
+            return []
+        identities: list[DeviceIdentity] = []
+        for mig_index in range(int(pynvml.nvmlDeviceGetMaxMigDeviceCount(handle))):
+            try:
+                mig_handle = pynvml.nvmlDeviceGetMigDeviceHandleByIndex(handle, mig_index)
+            except Exception:
+                continue
+            try:
+                mig_uuid = self._decode(pynvml.nvmlDeviceGetUUID(mig_handle))
+            except Exception:
+                mig_uuid = f"{physical_identity.uuid}/MIG-{mig_index}"
+            try:
+                mig_name = self._decode(pynvml.nvmlDeviceGetName(mig_handle))
+            except Exception:
+                mig_name = physical_identity.name
+            identity = DeviceIdentity(
+                index=index,
+                uuid=mig_uuid,
+                name=f"{mig_name} MIG {mig_index}",
+                entity_kind="mig",
+                parent_uuid=physical_identity.uuid,
+                mig_instance_id=str(mig_index),
+                mig_profile=mig_name,
+            )
+            self._handles[mig_uuid] = mig_handle
+            identities.append(identity)
+        if identities or self._mig_strategy == "mig":
+            return identities
+        return []
 
 
 @dataclass(frozen=True)

@@ -22,6 +22,17 @@ python -m pytest
 
 If you do not have access to NVIDIA hardware, use simulation mode and the fake NVML backend to reproduce behavior locally.
 
+## Release Checklist
+
+```bash
+pip install -e ".[release]"
+python -m build
+twine check dist/*
+python -m pytest
+```
+
+Before publishing, confirm that the package version in `gpu_low_util_monitor.__version__` is the intended release version.
+
 ## Contribution Style
 
 - prefer documented NVIDIA signals over clever but unsupported heuristics

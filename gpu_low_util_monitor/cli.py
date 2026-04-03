@@ -8,7 +8,8 @@ import time
 from pathlib import Path
 
 from gpu_low_util_monitor.collector import CollectorConfig, GPUCollector
-from gpu_low_util_monitor.nvml_adapter import FakeNVMLBackend, RealNVMLBackend
+from gpu_low_util_monitor.dcgm_adapter import DcgmExporterBackend, FileMetricsSource, UrlMetricsSource
+from gpu_low_util_monitor.nvml_adapter import FakeNVMLBackend, NVMLBackend, RealNVMLBackend
 from gpu_low_util_monitor.power import load_power_calibration_store
 from gpu_low_util_monitor.reporting import (
     ConsoleReporter,
@@ -38,6 +39,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--interval", type=float, default=1.0, help="Polling interval in seconds.")
     parser.add_argument(
+        "--backend",
+        choices=("nvml", "dcgm"),
+        default="nvml",
+        help="Backend mode. NVML is the default. DCGM mode ingests documented DCGM exporter metrics with degraded capability for some signals.",
+    )
+    parser.add_argument(
         "--window-short",
         type=int,
         default=60,
@@ -62,6 +69,30 @@ def build_parser() -> argparse.ArgumentParser:
         help="Serve current rolling summaries as Prometheus gauges labeled by window role and window duration.",
     )
     parser.add_argument("--simulate", action="store_true", help="Use the fake NVML backend for local simulation.")
+    parser.add_argument(
+        "--mig-mode",
+        choices=("auto", "gpu", "mig"),
+        default="auto",
+        help="MIG reporting mode. 'auto' prefers MIG instances when they can be enumerated, 'gpu' reports physical GPUs, and 'mig' requests MIG-only reporting.",
+    )
+    parser.add_argument(
+        "--dcgm-url",
+        type=str,
+        default=None,
+        help="DCGM exporter URL for --backend dcgm, for example http://dcgm-exporter:9400/metrics.",
+    )
+    parser.add_argument(
+        "--dcgm-file",
+        type=Path,
+        default=None,
+        help="Local Prometheus metrics file for --backend dcgm. Useful for testing or sidecar ingestion.",
+    )
+    parser.add_argument(
+        "--dcgm-timeout",
+        type=float,
+        default=5.0,
+        help="HTTP timeout in seconds for --dcgm-url. Default: 5.",
+    )
     parser.add_argument(
         "--power-mode",
         choices=("off", "raw", "calibrated"),
@@ -100,6 +131,25 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def build_backend(args: argparse.Namespace) -> NVMLBackend:
+    """Create the selected ingest backend from CLI arguments."""
+    if args.simulate:
+        return FakeNVMLBackend()
+    if args.backend == "nvml":
+        return RealNVMLBackend(
+            fail_on_unsupported=args.fail_on_unsupported,
+            mig_strategy=args.mig_mode,
+        )
+    if args.dcgm_file is not None:
+        return DcgmExporterBackend(FileMetricsSource(args.dcgm_file), mig_strategy=args.mig_mode)
+    if args.dcgm_url:
+        return DcgmExporterBackend(
+            UrlMetricsSource(args.dcgm_url, timeout_seconds=args.dcgm_timeout),
+            mig_strategy=args.mig_mode,
+        )
+    raise RuntimeError("DCGM backend requires either --dcgm-url or --dcgm-file.")
+
+
 def main() -> int:
     """CLI program entry point."""
     args = build_parser().parse_args()
@@ -111,7 +161,11 @@ def main() -> int:
         cli_busy_reference_w=args.busy_reference_w,
     )
 
-    backend = FakeNVMLBackend() if args.simulate else RealNVMLBackend(fail_on_unsupported=args.fail_on_unsupported)
+    try:
+        backend = build_backend(args)
+    except Exception as exc:
+        LOGGER.error("%s", exc)
+        return 2
     collector = GPUCollector(
         backend=backend,
         config=CollectorConfig(

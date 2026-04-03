@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gpu-low-util-monitor"
-version = "0.1.0"
 description = "Monitor low-utilization time, idle-state episodes, and workload starvation signals on NVIDIA datacenter GPUs."
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
+dynamic = ["version"]
 authors = [
   {name = "Manish Lachwani"}
 ]
-keywords = ["nvidia", "nvml", "gpu-monitoring", "gpu-observability", "h100", "h200"]
+keywords = ["nvidia", "nvml", "dcgm", "gpu-monitoring", "gpu-observability", "h100", "h200", "mig"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: System Administrators",
@@ -31,6 +31,8 @@ dependencies = [
 Homepage = "https://github.com/manishklach/gpu-low-util-monitor"
 Repository = "https://github.com/manishklach/gpu-low-util-monitor"
 Issues = "https://github.com/manishklach/gpu-low-util-monitor/issues"
+Documentation = "https://github.com/manishklach/gpu-low-util-monitor#readme"
+Changelog = "https://github.com/manishklach/gpu-low-util-monitor/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 nvml = [
@@ -42,6 +44,10 @@ dev = [
 prometheus = [
   "prometheus-client>=0.20.0",
 ]
+release = [
+  "build>=1.2.2",
+  "twine>=5.1.1",
+]
 
 [project.scripts]
 gpu-low-util-monitor = "gpu_low_util_monitor.cli:main"
@@ -52,6 +58,9 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["gpu_low_util_monitor*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "gpu_low_util_monitor.__version__"}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

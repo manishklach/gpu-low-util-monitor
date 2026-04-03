@@ -13,6 +13,10 @@ class DeviceIdentity:
     index: int
     uuid: str
     name: str
+    entity_kind: str = "gpu"
+    parent_uuid: str | None = None
+    mig_instance_id: str | None = None
+    mig_profile: str | None = None
 
 
 @dataclass(frozen=True)
@@ -112,6 +116,10 @@ class SampleReport:
             "gpu_index": self.sample.identity.index,
             "uuid": self.sample.identity.uuid,
             "name": self.sample.identity.name,
+            "entity_kind": self.sample.identity.entity_kind,
+            "parent_uuid": self.sample.identity.parent_uuid,
+            "mig_instance_id": self.sample.identity.mig_instance_id,
+            "mig_profile": self.sample.identity.mig_profile,
             "timestamp_ns": self.sample.monotonic_ns,
             "sample": {
                 "gpu_util_pct": self.sample.gpu_util_pct,

@@ -18,7 +18,14 @@ A common operator experience looks like this: `nvidia-smi` shows a GPU hovering 
 
 ## What It Measures
 
-The collector uses NVIDIA NVML as the primary source of truth and relies only on documented fields and APIs. The current implementation is NVML-first; DCGM power and energy fields are referenced and positioned as a future optional integration path rather than a required dependency in this release.
+The collector uses documented NVIDIA interfaces only. NVML remains the primary high-fidelity path, and the repo now also includes an optional DCGM exporter ingest mode for environments that already expose documented DCGM metrics.
+
+Backend modes:
+
+- `--backend nvml`
+  Primary mode. Supports the full current feature set that the runtime path exposes, including documented low-utilization policy counters, sampled Idle behavior, power telemetry, and MIG-aware enumeration when available.
+- `--backend dcgm`
+  Optional degraded mode that ingests documented DCGM exporter metrics from an HTTP endpoint or local metrics file. It supports GPU utilization, clocks, power, and cumulative energy when those DCGM metrics are present, but it does not expose the NVML-only low-utilization counter or sampled Idle-state behavior.
 
 Documented signals used today:
 
@@ -62,6 +69,23 @@ In public docs, the clean mental model is:
 - `power_activity_pct_short` and `power_activity_pct_long`
 
 Some outputs and examples still show default-style labels such as `1m` and `20m` for readability or backward compatibility. Those should be read as the configured short and long windows, whose defaults are 60 seconds and 1200 seconds.
+
+## MIG Support
+
+MIG support is intentionally careful rather than overclaimed.
+
+- In NVML mode, `--mig-mode auto` prefers per-MIG-instance reporting when MIG instances can be enumerated on a GPU.
+- `--mig-mode gpu` reports physical GPUs only, even if MIG is enabled.
+- `--mig-mode mig` requests MIG-only reporting where MIG enumeration is available.
+
+Outputs include additional identity fields so operators can distinguish physical GPUs from MIG instances:
+
+- `entity_kind`
+- `parent_uuid`
+- `mig_instance_id`
+- `mig_profile`
+
+Important caveat: MIG instances do not always expose the same signals as a full physical GPU. If a metric is unavailable for a MIG instance or backend mode, the repo emits `null` and keeps the availability flags honest.
 
 NVML is the right default for this repo because it is direct, documented, and already available anywhere `nvidia-smi` works. DCGM remains relevant for fleet aggregation and managed environments; that is why it appears in the references and roadmap, even though the current implementation path stays NVML-first.
 
@@ -239,7 +263,7 @@ source .venv/bin/activate
 pip install -e ".[dev,nvml]"
 ```
 
-Today the easiest path is still cloning the repo and installing it locally. The project metadata is already structured so a future PyPI package is straightforward, but this repository should not imply that a published package exists unless and until one is actually released.
+Today the easiest path is still cloning the repo and installing it locally. The packaging metadata is now PyPI-ready and versioned from the package itself, but the README should not imply that a published package already exists unless and until one is actually released.
 
 Simulation only:
 
@@ -251,6 +275,14 @@ With optional Prometheus exporter support:
 
 ```bash
 pip install -e ".[dev,prometheus]"
+```
+
+For release builds:
+
+```bash
+pip install -e ".[release]"
+python -m build
+twine check dist/*
 ```
 
 ## Power Calibration
@@ -311,6 +343,8 @@ python -m gpu_low_util_monitor --simulate --interval 1 --window-short 60 --windo
 python -m gpu_low_util_monitor --simulate --prometheus-port 9108 --out-dir ./out
 python -m gpu_low_util_monitor --simulate --idle-baseline-w 80 --busy-reference-w 700 --emit-heatmap-json --jsonl --csv
 python -m gpu_low_util_monitor --once --verbose
+python -m gpu_low_util_monitor --backend dcgm --dcgm-url http://dcgm-exporter:9400/metrics --window-short 60 --window-long 1200
+python -m gpu_low_util_monitor --backend nvml --mig-mode auto --once --verbose
 ```
 
 The `--window-short` and `--window-long` values are operator-configurable. The defaults are 60 seconds and 1200 seconds, but the semantics of the tool are not tied to those particular durations. Public examples often show 1 minute and 20 minutes because they are sensible defaults, not because they are immutable product constants.
@@ -324,6 +358,11 @@ python -m gpu_low_util_monitor --simulate --once --verbose
 
 Power-specific options:
 
+- `--backend nvml|dcgm`
+- `--mig-mode auto|gpu|mig`
+- `--dcgm-url`
+- `--dcgm-file`
+- `--dcgm-timeout`
 - `--power-mode off|raw|calibrated`
 - `--idle-baseline-w`
 - `--busy-reference-w`
@@ -391,6 +430,12 @@ At each poll, the collector:
 3. Computes short-window and long-window summaries, optionally adds calibrated power normalization, then emits JSONL, CSV, console, heatmap, and Prometheus outputs
 
 The windows are time-based rather than sample-count-based, so interval jitter is handled correctly. Short and long windows remain operator-configurable; 60 seconds and 1200 seconds are defaults only.
+
+Backend-specific caveats:
+
+- NVML mode is the only mode that currently supports the documented low-utilization perf-policy counter used for the headline KPI.
+- DCGM mode is intentionally degraded: low-utilization percentage, sampled Idle percentage, Idle entries, and thermal/power-limit reason sampling are emitted as unavailable because they do not map cleanly through the current DCGM exporter ingest path.
+- MIG instance reporting is most complete in NVML mode. In DCGM mode, MIG awareness depends on exporter labels such as `GPU_I_ID` and `GPU_I_PROFILE`.
 
 ## Running Later on H100/H200
 
@@ -472,6 +517,10 @@ The example above uses the default windows. If you change `--window-short` or `-
 
 See [examples/sample_output.jsonl](examples/sample_output.jsonl).
 
+### MIG-Aware JSONL
+
+See [examples/sample_mig_output.jsonl](examples/sample_mig_output.jsonl).
+
 ### CSV
 
 See [examples/sample_summary.csv](examples/sample_summary.csv).
@@ -498,6 +547,10 @@ If `--emit-heatmap-json` is enabled, the tool writes machine-friendly snapshots 
 
 See [examples/sample_prometheus.txt](examples/sample_prometheus.txt).
 
+### DCGM Exporter Input Example
+
+See [examples/sample_dcgm_exporter.prom](examples/sample_dcgm_exporter.prom).
+
 ### Screenshots
 
 See [examples/screenshots/README.md](examples/screenshots/README.md) for the placeholder structure reserved for future visual captures.
@@ -516,10 +569,11 @@ These references are the basis for the repository's semantics:
 - NVML is the underlying management interface used by `nvidia-smi`
 - `NVML_FI_DEV_PERF_POLICY_LOW_UTILIZATION` is used as the primary low-utilization policy signal and therefore the basis of the headline long-window KPI
 - NVML power and energy queries provide the raw inputs for the complementary power-first activity view in the current implementation
+- DCGM field identifiers such as `DCGM_FI_DEV_GPU_UTIL`, `DCGM_FI_DEV_SM_CLOCK`, `DCGM_FI_DEV_MEM_CLOCK`, `DCGM_FI_DEV_POWER_USAGE`, and `DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION` are the basis of the optional DCGM exporter ingest mode
 - Idle is treated as a current sampled event reason, not a cumulative timer
 - NVIDIA documents that Idle-related event reporting may be deprecated in future releases
 - `nvidia-smi` exposes clocks event reasons and related counters, which helps operators validate related signals on target hosts
-- DCGM documents fields such as `DCGM_FI_DEV_POWER_USAGE`, `DCGM_FI_DEV_POWER_USAGE_INSTANT`, and `DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION`, which are relevant for a future optional DCGM integration path
+- DCGM documents fields such as `DCGM_FI_DEV_GPU_UTIL`, `DCGM_FI_DEV_SM_CLOCK`, `DCGM_FI_DEV_MEM_CLOCK`, `DCGM_FI_DEV_POWER_USAGE`, `DCGM_FI_DEV_POWER_USAGE_INSTANT`, and `DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION`, which are the basis of the current optional DCGM exporter ingest mode
 
 ## Roadmap
 
@@ -534,7 +588,7 @@ These references are the basis for the repository's semantics:
 - Add richer Prometheus labeling and scrape examples
 - Add summary snapshots and fleet-level aggregation helpers
 - Add examples for correlating low-utilization time with scheduler and input-pipeline telemetry
-- Add an optional DCGM-backed collector path for environments that want DCGM field integration for power and energy
+- Expand DCGM support beyond exporter ingest for environments that want richer DCGM-backed field integration
 
 ## Release Notes
 

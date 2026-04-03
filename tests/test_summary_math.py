@@ -32,6 +32,7 @@ def test_multi_gpu_collection_and_formatting(tmp_path: Path) -> None:
     csv_text = (tmp_path / "gpu_summary.csv").read_text(encoding="utf-8")
 
     assert '"gpu_index":0' in jsonl_text
+    assert '"entity_kind":"gpu"' in jsonl_text
     assert '"summary_short"' in jsonl_text
     assert '"summary_long"' in jsonl_text
     assert '"summary_60s"' in jsonl_text
@@ -39,6 +40,7 @@ def test_multi_gpu_collection_and_formatting(tmp_path: Path) -> None:
     assert '"thermal_limit_active"' in jsonl_text
     assert '"power_limit_pct_window"' in jsonl_text
     assert "window_role" in csv_text
+    assert "entity_kind" in csv_text
     assert "window_seconds" in csv_text
     assert "low_util_pct_window" in csv_text
     assert "thermal_limit_pct_window" in csv_text
