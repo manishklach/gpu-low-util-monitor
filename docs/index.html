@@ -267,6 +267,20 @@
       margin-bottom: 10px;
     }
 
+    .visual {
+      margin: 26px 0;
+      padding: 14px;
+      border-radius: 20px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+    }
+
+    .visual img {
+      display: block;
+      width: 100%;
+      border-radius: 14px;
+    }
+
     code, pre {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
@@ -359,6 +373,9 @@
       <div class="callout">
         This is the right framing: not a magical truth engine, not an exact billing-waste meter,
         but a practical rolling-window observability signal grounded in documented NVIDIA behavior.
+      </div>
+      <div class="visual">
+        <img src="visual-overview.svg" alt="Overview of gpu-low-util-monitor signals, rolling windows, and operator view" />
       </div>
     </section>
 
@@ -480,6 +497,11 @@
         Power tells you that a GPU looks dark or dim; low-util and idle telemetry help explain
         how often and in what pattern that is happening.
       </blockquote>
+      <div class="callout">
+        Rolling-window GPU low-utilization monitoring is most useful when the signals agree: low-utilization time,
+        idle-state behavior, and GPU power telemetry together make underfed GPUs easier to recognize than any single
+        snapshot metric alone.
+      </div>
       <p>
         That is the most useful way to think about the combined system:
       </p>

@@ -4,6 +4,14 @@
 
 `gpu-low-util-monitor` is a Linux-first observability tool for NVIDIA datacenter GPUs, with NVIDIA H100 and H200 as the initial target use cases. It measures low-utilization, idle-state behavior, and power-based activity over time using documented NVIDIA signals. It provides a practical proxy for GPU underuse, workload starvation, underfeeding, or dark/dim GPUs, but it should not claim omniscient knowledge of economic waste or all causes of low activity.
 
+![gpu-low-util-monitor overview](docs/visual-overview.svg)
+
+## At a Glance
+
+- Dashboard: [grafana/dashboard.json](grafana/dashboard.json)
+- Deployment: [Dockerfile](Dockerfile), [deploy/configmap.yaml](deploy/configmap.yaml), [deploy/daemonset.yaml](deploy/daemonset.yaml)
+- Examples: [examples/sample_output.jsonl](examples/sample_output.jsonl), [examples/sample_summary.csv](examples/sample_summary.csv), [examples/sample_prometheus.txt](examples/sample_prometheus.txt)
+
 ## Why This Exists
 
 Datacenter GPU observability is often too snapshot-heavy. A point-in-time GPU busy number can miss the more operationally useful question: was this GPU actually doing meaningful work over the last few minutes, or did it spend a meaningful share of that time underfed, intermittently idle, or electrically dim? This repository exists to measure a careful subset of observables: documented low-utilization policy time, sampled GPU idle-state monitoring, software-derived Idle entries, and GPU power telemetry that help distinguish dark, dim, bursty, underfed, or bright/busy GPUs over configurable rolling windows.
@@ -15,6 +23,10 @@ Instantaneous utilization is useful context, but it is not the headline KPI here
 ## Quick Story
 
 A common operator experience looks like this: `nvidia-smi` shows a GPU hovering around 70% busy, so at first glance it does not look like a problem. But the rolling-window view can still show high long-window low-utilization percentage, repeated Idle entries, and dim average power. That combination suggests the GPU is active in bursts rather than steadily fed. The point is not that the instantaneous busy number is wrong. The point is that it is incomplete.
+
+## Why This Matters
+
+Illustrative scenario, not a customer claim: standard monitoring showed modest utilization, but the monitor revealed a high share of long-window low-utilization time, repeated Idle entries, and dim power behavior. That points more toward host-side feeding gaps or bursty dispatch than a healthy steady-state workload.
 
 ## What It Measures
 
@@ -421,6 +433,8 @@ A Grafana starter dashboard is included at [grafana/dashboard.json](grafana/dash
 - long-window power as a percentage of cap
 - long-window thermal-limit and power-limit corroboration
 
+If you want a placeholder visual for screenshots or documentation updates later, see [examples/screenshots/README.md](examples/screenshots/README.md).
+
 ## How It Works
 
 At each poll, the collector:
@@ -563,6 +577,14 @@ See [examples/screenshots/README.md](examples/screenshots/README.md) for the pla
 - NVML clocks event reasons: [group__nvmlClocksEventReasons.html](https://docs.nvidia.com/deploy/nvml-api/group__nvmlClocksEventReasons.html)
 - NVIDIA `nvidia-smi` documentation: [docs.nvidia.com/deploy/nvidia-smi](https://docs.nvidia.com/deploy/nvidia-smi/index.html)
 - NVIDIA DCGM field identifiers: [dcgm-api-field-ids.html](https://docs.nvidia.com/datacenter/dcgm/latest/dcgm-api/dcgm-api-field-ids.html)
+
+Useful repo entry points:
+
+- [README.md](README.md)
+- [grafana/dashboard.json](grafana/dashboard.json)
+- [examples/sample_output.jsonl](examples/sample_output.jsonl)
+- [examples/sample_summary.csv](examples/sample_summary.csv)
+- [examples/sample_prometheus.txt](examples/sample_prometheus.txt)
 
 These references are the basis for the repository's semantics:
 

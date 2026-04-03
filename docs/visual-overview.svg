@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="gpu-low-util-monitor overview">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#08101d"/>
+      <stop offset="100%" stop-color="#0b1020"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#17203f"/>
+      <stop offset="100%" stop-color="#111831"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <text x="72" y="74" fill="#9bffcf" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="2">GPU LOW-UTILIZATION MONITORING</text>
+  <text x="72" y="128" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="46" font-weight="800">Rolling-window observability for dark, dim, and underfed GPUs</text>
+
+  <rect x="72" y="180" width="320" height="196" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
+  <text x="100" y="224" fill="#7cc4ff" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Signals In</text>
+  <text x="100" y="268" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">NVML or DCGM exporter</text>
+  <text x="100" y="304" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Low-utilization policy time</text>
+  <text x="100" y="336" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Idle-state sampling</text>
+  <text x="100" y="368" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Power and energy telemetry</text>
+
+  <rect x="478" y="180" width="324" height="196" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
+  <text x="506" y="224" fill="#7cc4ff" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Rolling Windows</text>
+  <text x="506" y="268" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">Configurable short and long windows</text>
+  <text x="506" y="304" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Low-util percentage</text>
+  <text x="506" y="336" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Idle sampled percentage and entries</text>
+  <text x="506" y="368" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Power and thermal corroboration</text>
+
+  <rect x="888" y="180" width="320" height="196" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
+  <text x="916" y="224" fill="#7cc4ff" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Operator View</text>
+  <text x="916" y="268" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">Long-window low-util is the headline KPI</text>
+  <text x="916" y="304" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Dark / dim / bright heuristics</text>
+  <text x="916" y="336" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Likely underfeeding or burstiness</text>
+  <text x="916" y="368" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Not a guaranteed root-cause engine</text>
+
+  <path d="M392 278 L478 278" stroke="#7cc4ff" stroke-width="6" stroke-linecap="round"/>
+  <polygon points="478,278 460,268 460,288" fill="#7cc4ff"/>
+  <path d="M802 278 L888 278" stroke="#7cc4ff" stroke-width="6" stroke-linecap="round"/>
+  <polygon points="888,278 870,268 870,288" fill="#7cc4ff"/>
+
+  <rect x="72" y="446" width="1136" height="182" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
+  <text x="104" y="492" fill="#9bffcf" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">At a glance</text>
+  <text x="104" y="538" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="26">Standard monitoring can show a GPU as moderately busy while rolling windows reveal high low-utilization time, repeated idle entries, and dim power.</text>
+  <text x="104" y="578" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="24">That is the value proposition: not omniscient truth, but a practical observability layer for NVIDIA H100, H200, and similar datacenter GPUs.</text>
+</svg>
