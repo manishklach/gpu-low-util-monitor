@@ -23,7 +23,8 @@ def build_parser() -> argparse.ArgumentParser:
             "This tool measures low-utilization and idle-state behavior over time using documented "
             "NVIDIA signals. It provides a practical proxy for GPU underuse, workload starvation, "
             "or underfeeding, but it should not claim omniscient knowledge of economic waste or "
-            "all causes of low activity."
+            "all causes of low activity. The short and long windows are operator-configurable; "
+            "60 seconds and 1200 seconds are defaults, not fixed product semantics."
         ),
     )
     parser.add_argument("--interval", type=float, default=1.0, help="Polling interval in seconds.")

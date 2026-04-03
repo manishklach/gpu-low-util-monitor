@@ -19,16 +19,15 @@ The collector uses NVIDIA NVML as the primary source of truth and relies only on
 
 Headline KPI:
 
-- `low_util_pct_20m`
+- long-window low-utilization percentage
 
 Corroborating metrics:
 
-- `low_util_pct_1m`
-- `idle_reason_pct_20m`
-- `idle_entries_20m`
-- `avg_gpu_util_20m`
-
-The design intentionally treats low-utilization over time as the primary KPI, not instantaneous utilization.
+- short-window low-utilization percentage
+- long-window sampled Idle percentage
+- long-window Idle entry count
+- long-window average GPU utilization
+The design intentionally treats low-utilization over time as the primary KPI, not instantaneous utilization. The default short and long windows are 60 seconds and 1200 seconds, but both are operator-configurable at runtime.
 
 ## Metric Semantics
 
@@ -49,7 +48,7 @@ Implementation notes:
 
 Interpretation:
 
-- High `low_util_pct_20m` suggests the GPU spent a meaningful fraction of the recent window in documented low-utilization policy
+- High long-window low-utilization percentage suggests the GPU spent a meaningful fraction of the recent long window in documented low-utilization policy
 
 ### `idle_reason_pct_window`
 
@@ -66,7 +65,7 @@ Implementation notes:
 
 Interpretation:
 
-- High `idle_reason_pct_20m` suggests the GPU frequently appeared idle at sample times
+- High long-window sampled Idle percentage suggests the GPU frequently appeared idle at sample times
 
 ### `idle_entries_window`
 
@@ -80,7 +79,7 @@ Implementation notes:
 
 Interpretation:
 
-- High `idle_entries_20m` suggests bursty or intermittent dispatch
+- High long-window Idle entry count suggests bursty or intermittent dispatch
 
 ### Supporting Metrics
 
@@ -105,17 +104,17 @@ These are related but not interchangeable signals.
 
 The best operational read comes from the metrics together, not in isolation.
 
-- High `low_util_pct_20m` suggests sustained or repeated time in documented low-utilization policy
-- High `idle_reason_pct_20m` suggests the GPU often looked idle when sampled
-- High `idle_entries_20m` suggests bursty scheduling or intermittent dispatch
-- Moderate `avg_gpu_util_20m` does not invalidate high low-utilization time; short bursts of work can coexist with meaningful low-util intervals
+- High long-window low-utilization percentage suggests sustained or repeated time in documented low-utilization policy
+- High long-window sampled Idle percentage suggests the GPU often looked idle when sampled
+- High long-window Idle entry count suggests bursty scheduling or intermittent dispatch
+- Moderate long-window average GPU utilization does not invalidate high low-utilization time; short bursts of work can coexist with meaningful low-util intervals
 - Low-utilization is often consistent with workload starvation or underfeeding, but the tool measures observables rather than proving root cause
 
 Common interpretations:
 
-- High `low_util_pct_20m` + high `idle_reason_pct_20m`: likely many idle or near-idle periods
-- High `low_util_pct_20m` + lower `idle_reason_pct_20m`: likely underfed, bursty, or bubble-heavy work rather than complete idleness
-- Low `low_util_pct_20m` + high utilization + lower clocks: potentially power or thermal limitation rather than lack of work
+- High long-window low-utilization percentage + high long-window sampled Idle percentage: likely many idle or near-idle periods
+- High long-window low-utilization percentage + lower long-window sampled Idle percentage: likely underfed, bursty, or bubble-heavy work rather than complete idleness
+- Low long-window low-utilization percentage + high utilization + lower clocks: potentially power or thermal limitation rather than lack of work
 
 ## Limitations
 
@@ -140,7 +139,7 @@ At each poll, the collector:
 7. Computes rolling summaries for the short and long windows
 8. Emits JSONL, CSV, console output, and optional Prometheus gauges
 
-Windows are time-based, not sample-count-based, so interval jitter is handled correctly.
+Windows are time-based, not sample-count-based, so interval jitter is handled correctly. Short and long windows are configurable; 60 seconds and 1200 seconds are defaults only.
 
 ## Installation
 
@@ -183,6 +182,8 @@ python -m gpu_low_util_monitor --simulate --interval 1 --window-short 60 --windo
 python -m gpu_low_util_monitor --simulate --prometheus-port 9108 --out-dir ./out
 python -m gpu_low_util_monitor --once --verbose
 ```
+
+The `--window-short` and `--window-long` values are operator-configurable. The defaults are 60 seconds and 1200 seconds, but the semantics of the tool are not tied to those particular durations.
 
 ## Running Later on H100/H200
 
@@ -244,10 +245,12 @@ sudo systemctl status gpu-low-util-monitor.service
 ### Console
 
 ```text
-gpu idx | name | low_util_1m | low_util_20m | idle_pct_1m | idle_pct_20m | idle_entries_20m | util_20m | sm_clk_20m | power_20m
+gpu idx | name | low_util_short(1m) | low_util_long(20m) | idle_pct_short(1m) | idle_pct_long(20m) | idle_entries_long(20m) | util_long(20m) | sm_clk_long(20m) | power_long(20m)
 0 | NVIDIA H100 80GB HBM3 | 65.8 | 67.1 | 30.5 | 33.2 | 49 | 27.4 | 1008.8 | 216.1
 1 | NVIDIA H200 141GB HBM3e | 2.0 | 2.0 | 0.0 | 0.0 | 0 | 96.0 | 1830.0 | 662.0
 ```
+
+The example above uses the default windows. If you change `--window-short` or `--window-long`, the rendered labels change too.
 
 ### JSONL
 
@@ -259,18 +262,16 @@ See [examples/sample_summary.csv](examples/sample_summary.csv).
 
 ## Prometheus Metrics
 
-If `--prometheus-port` is set and `prometheus-client` is installed, the exporter publishes:
+If `--prometheus-port` is set and `prometheus-client` is installed, the exporter publishes configurable-window-aware metrics:
 
-- `gpu_low_util_pct_1m`
-- `gpu_low_util_pct_20m`
-- `gpu_idle_reason_pct_1m`
-- `gpu_idle_reason_pct_20m`
-- `gpu_idle_entries_20m`
-- `gpu_avg_gpu_util_20m`
-- `gpu_avg_sm_clock_mhz_20m`
-- `gpu_avg_power_w_20m`
+- `gpu_low_util_pct`
+- `gpu_idle_reason_pct`
+- `gpu_idle_entries`
+- `gpu_avg_gpu_util`
+- `gpu_avg_sm_clock_mhz`
+- `gpu_avg_power_w`
 
-These reflect the current rolling summaries, labeled by GPU index, UUID, and name.
+These reflect the current rolling summaries and are labeled by GPU index, UUID, name, `window_role`, and `window_seconds`.
 
 ## Simulation Mode
 
@@ -302,7 +303,7 @@ Simulation mode is intended for development, metric validation, and documentatio
 These references are the basis for the repository's semantics:
 
 - NVML is the underlying management interface used by `nvidia-smi`
-- `NVML_FI_DEV_PERF_POLICY_LOW_UTILIZATION` is used as the primary low-utilization policy signal
+- `NVML_FI_DEV_PERF_POLICY_LOW_UTILIZATION` is used as the primary low-utilization policy signal and therefore the basis of the headline long-window KPI
 - Idle is treated as a current sampled event reason, not a cumulative timer
 - NVIDIA documents that Idle-related event reporting may be deprecated in future releases
 - `nvidia-smi` exposes clocks event reasons and clocks event reason counters, which helps operators validate related signals on target hosts

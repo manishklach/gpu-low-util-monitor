@@ -80,7 +80,15 @@ class SampleReport:
     long_summary: WindowSummary
 
     def to_json_dict(self) -> dict[str, Any]:
-        """Convert the report into a JSONL-friendly dictionary."""
+        """Convert the report into a JSONL-friendly dictionary.
+
+        The payload includes both role-based keys (`summary_short`, `summary_long`)
+        and explicit duration keys (`summary_60s`, `summary_1200s`, etc.) so that
+        downstream consumers can rely on operator-configured windows without
+        treating the default durations as fixed product semantics.
+        """
+        short_key = f"summary_{self.short_summary.window_seconds}s"
+        long_key = f"summary_{self.long_summary.window_seconds}s"
         return {
             "wall_time_iso": self.sample.wall_time_iso,
             "gpu_index": self.sample.identity.index,
@@ -95,7 +103,9 @@ class SampleReport:
                 "idle_reason_active": self.sample.idle_reason_active,
                 "low_util_counter_ns": self.sample.low_util_counter_ns,
             },
-            f"summary_{self.short_summary.window_seconds}s": self.short_summary.to_public_dict(),
-            f"summary_{self.long_summary.window_seconds}s": self.long_summary.to_public_dict(),
+            "summary_short": self.short_summary.to_public_dict(),
+            "summary_long": self.long_summary.to_public_dict(),
+            short_key: self.short_summary.to_public_dict(),
+            long_key: self.long_summary.to_public_dict(),
             "availability": self.sample.capabilities.to_dict(),
         }

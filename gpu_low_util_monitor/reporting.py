@@ -6,7 +6,7 @@ import csv
 import logging
 from pathlib import Path
 
-from gpu_low_util_monitor.models import SampleReport
+from gpu_low_util_monitor.models import SampleReport, WindowSummary
 from gpu_low_util_monitor.util import dumps_compact_json, ensure_directory
 
 LOGGER = logging.getLogger(__name__)
@@ -33,6 +33,7 @@ class CsvSummaryWriter:
         "gpu_index",
         "uuid",
         "name",
+        "window_role",
         "window_seconds",
         "low_util_pct_window",
         "idle_reason_pct_window",
@@ -48,37 +49,52 @@ class CsvSummaryWriter:
         self._initialized = self._path.exists()
 
     def write_reports(self, reports: list[SampleReport]) -> None:
-        """Append long-window summaries to the CSV file."""
+        """Append short- and long-window summaries to the CSV file."""
         with self._path.open("a", newline="", encoding="utf-8") as handle:
             writer = csv.DictWriter(handle, fieldnames=self.FIELDNAMES)
             if not self._initialized:
                 writer.writeheader()
                 self._initialized = True
             for report in reports:
-                summary = report.long_summary
-                writer.writerow(
-                    {
-                        "wall_time_iso": report.sample.wall_time_iso,
-                        "gpu_index": report.sample.identity.index,
-                        "uuid": report.sample.identity.uuid,
-                        "name": report.sample.identity.name,
-                        "window_seconds": summary.window_seconds,
-                        **summary.to_public_dict(),
-                    }
-                )
+                for window_role, summary in (("short", report.short_summary), ("long", report.long_summary)):
+                    writer.writerow(
+                        {
+                            "wall_time_iso": report.sample.wall_time_iso,
+                            "gpu_index": report.sample.identity.index,
+                            "uuid": report.sample.identity.uuid,
+                            "name": report.sample.identity.name,
+                            "window_role": window_role,
+                            "window_seconds": summary.window_seconds,
+                            **summary.to_public_dict(),
+                        }
+                    )
 
 
 class ConsoleReporter:
-    """Render a concise one-line-per-GPU console view."""
-
-    HEADER = (
-        "gpu idx | name | low_util_1m | low_util_20m | idle_pct_1m | "
-        "idle_pct_20m | idle_entries_20m | util_20m | sm_clk_20m | power_20m"
-    )
+    """Render a concise one-line-per-GPU console view with configured windows."""
 
     def render(self, reports: list[SampleReport]) -> str:
         """Render reports as a multi-line string."""
-        rows = [self.HEADER]
+        if not reports:
+            return "gpu idx | name | no data"
+        short_label = _format_window_label(reports[0].short_summary.window_seconds)
+        long_label = _format_window_label(reports[0].long_summary.window_seconds)
+        rows = [
+            " | ".join(
+                [
+                    "gpu idx",
+                    "name",
+                    f"low_util_short({short_label})",
+                    f"low_util_long({long_label})",
+                    f"idle_pct_short({short_label})",
+                    f"idle_pct_long({long_label})",
+                    f"idle_entries_long({long_label})",
+                    f"util_long({long_label})",
+                    f"sm_clk_long({long_label})",
+                    f"power_long({long_label})",
+                ]
+            )
+        ]
         for report in reports:
             rows.append(
                 " | ".join(
@@ -100,7 +116,12 @@ class ConsoleReporter:
 
 
 class PrometheusExporter:
-    """Optional Prometheus exporter for current rolling summaries."""
+    """Optional Prometheus exporter for current rolling summaries.
+
+    Metrics include explicit `window_role` and `window_seconds` labels so that
+    operators can change window lengths without the metric names implying a
+    fixed 60-second or 1200-second product contract.
+    """
 
     def __init__(self, port: int) -> None:
         try:
@@ -110,16 +131,14 @@ class PrometheusExporter:
                 "prometheus-client is not installed. Install with `pip install -e \".[prometheus]\"`."
             ) from exc
         self._port = port
-        labels = ("gpu_index", "uuid", "name")
+        labels = ("gpu_index", "uuid", "name", "window_role", "window_seconds")
         self._gauges = {
-            "gpu_low_util_pct_1m": Gauge("gpu_low_util_pct_1m", "Short-window low utilization percentage.", labels),
-            "gpu_low_util_pct_20m": Gauge("gpu_low_util_pct_20m", "Long-window low utilization percentage.", labels),
-            "gpu_idle_reason_pct_1m": Gauge("gpu_idle_reason_pct_1m", "Short-window idle reason percentage.", labels),
-            "gpu_idle_reason_pct_20m": Gauge("gpu_idle_reason_pct_20m", "Long-window idle reason percentage.", labels),
-            "gpu_idle_entries_20m": Gauge("gpu_idle_entries_20m", "Long-window idle entry count.", labels),
-            "gpu_avg_gpu_util_20m": Gauge("gpu_avg_gpu_util_20m", "Long-window average GPU utilization percentage.", labels),
-            "gpu_avg_sm_clock_mhz_20m": Gauge("gpu_avg_sm_clock_mhz_20m", "Long-window average SM clock in MHz.", labels),
-            "gpu_avg_power_w_20m": Gauge("gpu_avg_power_w_20m", "Long-window average power in watts.", labels),
+            "gpu_low_util_pct": Gauge("gpu_low_util_pct", "Rolling low-utilization percentage.", labels),
+            "gpu_idle_reason_pct": Gauge("gpu_idle_reason_pct", "Rolling sampled Idle percentage.", labels),
+            "gpu_idle_entries": Gauge("gpu_idle_entries", "Rolling software-derived Idle entry count.", labels),
+            "gpu_avg_gpu_util": Gauge("gpu_avg_gpu_util", "Rolling average GPU utilization percentage.", labels),
+            "gpu_avg_sm_clock_mhz": Gauge("gpu_avg_sm_clock_mhz", "Rolling average SM clock in MHz.", labels),
+            "gpu_avg_power_w": Gauge("gpu_avg_power_w", "Rolling average power in watts.", labels),
         }
 
     def start(self) -> None:
@@ -132,21 +151,26 @@ class PrometheusExporter:
     def update(self, reports: list[SampleReport]) -> None:
         """Update gauges from the current reports."""
         for report in reports:
-            labels = (
-                str(report.sample.identity.index),
-                report.sample.identity.uuid,
-                report.sample.identity.name,
-            )
-            self._set("gpu_low_util_pct_1m", labels, report.short_summary.low_util_pct_window)
-            self._set("gpu_low_util_pct_20m", labels, report.long_summary.low_util_pct_window)
-            self._set("gpu_idle_reason_pct_1m", labels, report.short_summary.idle_reason_pct_window)
-            self._set("gpu_idle_reason_pct_20m", labels, report.long_summary.idle_reason_pct_window)
-            self._set("gpu_idle_entries_20m", labels, report.long_summary.idle_entries_window)
-            self._set("gpu_avg_gpu_util_20m", labels, report.long_summary.avg_gpu_util_window)
-            self._set("gpu_avg_sm_clock_mhz_20m", labels, report.long_summary.avg_sm_clock_mhz_window)
-            self._set("gpu_avg_power_w_20m", labels, report.long_summary.avg_power_w_window)
+            self._set_windowed_metrics(report, "short", report.short_summary)
+            self._set_windowed_metrics(report, "long", report.long_summary)
 
-    def _set(self, name: str, labels: tuple[str, str, str], value: float | int | None) -> None:
+    def _set_windowed_metrics(self, report: SampleReport, window_role: str, summary: WindowSummary) -> None:
+        """Update all gauges for one report and one configured window."""
+        labels = (
+            str(report.sample.identity.index),
+            report.sample.identity.uuid,
+            report.sample.identity.name,
+            window_role,
+            str(summary.window_seconds),
+        )
+        self._set("gpu_low_util_pct", labels, summary.low_util_pct_window)
+        self._set("gpu_idle_reason_pct", labels, summary.idle_reason_pct_window)
+        self._set("gpu_idle_entries", labels, summary.idle_entries_window)
+        self._set("gpu_avg_gpu_util", labels, summary.avg_gpu_util_window)
+        self._set("gpu_avg_sm_clock_mhz", labels, summary.avg_sm_clock_mhz_window)
+        self._set("gpu_avg_power_w", labels, summary.avg_power_w_window)
+
+    def _set(self, name: str, labels: tuple[str, str, str, str, str], value: float | int | None) -> None:
         """Set a gauge when a value is available."""
         if value is None:
             return
@@ -160,3 +184,13 @@ def _fmt(value: float | int | None) -> str:
     if isinstance(value, int):
         return str(value)
     return f"{value:.1f}"
+
+
+def _format_window_label(window_seconds: int) -> str:
+    """Return a compact human-readable label for a configured window."""
+    if window_seconds % 60 == 0:
+        minutes = window_seconds // 60
+        if minutes == 1:
+            return "1m"
+        return f"{minutes}m"
+    return f"{window_seconds}s"
