@@ -2,11 +2,15 @@
 
 ![CI](https://github.com/manishklach/gpu-low-util-monitor/actions/workflows/ci.yml/badge.svg)
 
-`gpu-low-util-monitor` is a Linux-first observability tool for NVIDIA datacenter GPUs, with H100 and H200 as the initial target. It measures low-utilization, idle-state behavior, and power-based activity over time using documented NVIDIA signals. It provides a practical proxy for GPU underuse, workload starvation, underfeeding, or dark/dim GPUs, but it should not claim omniscient knowledge of economic waste or all causes of low activity.
+`gpu-low-util-monitor` is a Linux-first observability tool for NVIDIA datacenter GPUs, with NVIDIA H100 monitoring and NVIDIA H200 monitoring as the initial target use cases. It measures low-utilization, idle-state behavior, and power-based activity over time using documented NVIDIA signals. It provides a practical proxy for GPU underuse, workload starvation, underfeeding, or dark/dim GPUs, but it should not claim omniscient knowledge of economic waste or all causes of low activity.
 
 ## Why This Exists
 
-Datacenter GPUs are expensive, and operators often need a defensible answer to a narrower question than "what did this GPU really look like over the last few minutes?" This repository exists to measure a careful subset of observables: documented low-utilization policy time, sampled Idle-state presence, software-derived Idle entries, and power-based activity signals that help distinguish dark, dim, bursty, underfed, or bright/busy GPUs over rolling windows.
+Datacenter GPU observability is often too snapshot-heavy. A point-in-time GPU busy number can miss the more operationally useful question: was this GPU actually doing meaningful work over the last few minutes, or did it spend a meaningful share of that time underfed, intermittently idle, or electrically dim? This repository exists to measure a careful subset of observables: documented low-utilization policy time, sampled GPU idle-state monitoring, software-derived Idle entries, and GPU power telemetry that help distinguish dark, dim, bursty, underfed, or bright/busy GPUs over configurable rolling windows.
+
+## Why Not Just GPU Busy?
+
+Instantaneous utilization is useful context, but it is not the headline KPI here. Short bursts of work can make a GPU look busy in a snapshot while still leaving a large share of the recent short or long window in documented low-utilization policy, sampled idle-state presence, or low power. Rolling-window telemetry is a better fit for workload starvation, bursty scheduling, and underfed GPUs than a single busy percentage sampled at one moment.
 
 ## What It Measures
 
@@ -40,7 +44,7 @@ Complementary power/activity metrics:
 - optional normalized power activity percentage when calibration is available
 - short-window and long-window energy accumulation when cumulative energy is available
 
-The design intentionally treats low-utilization over time as the primary KPI, not instantaneous utilization. The default short and long windows are 60 seconds and 1200 seconds, but both are operator-configurable at runtime.
+The design intentionally treats low-utilization over time as the primary KPI, not instantaneous utilization. The default short and long windows are 60 seconds and 1200 seconds, but both are operator-configurable at runtime and should be interpreted as defaults rather than fixed product semantics.
 
 ## Behavioral Metrics
 
@@ -146,7 +150,7 @@ Important cautions:
 - `energy_joules_window`
 - `power_activity_pct_window`
 
-These are supporting context, not replacements for the headline KPI.
+These are supporting context, not replacements for the headline KPI. Raw power is documented telemetry. Normalized power activity is a repo-defined calibration-based proxy, not an official NVIDIA metric.
 
 ### Distinctions That Matter
 
@@ -289,7 +293,7 @@ python -m gpu_low_util_monitor --simulate --idle-baseline-w 80 --busy-reference-
 python -m gpu_low_util_monitor --once --verbose
 ```
 
-The `--window-short` and `--window-long` values are operator-configurable. The defaults are 60 seconds and 1200 seconds, but the semantics of the tool are not tied to those particular durations.
+The `--window-short` and `--window-long` values are operator-configurable. The defaults are 60 seconds and 1200 seconds, but the semantics of the tool are not tied to those particular durations. Public examples often show 1 minute and 20 minutes because they are sensible defaults, not because they are immutable product constants.
 
 Power-specific options:
 
@@ -369,7 +373,7 @@ gpu idx | name | low_util_short(1m) | low_util_long(20m) | idle_pct_short(1m) | 
 1 | NVIDIA H200 141GB HBM3e | 2.0 | 2.0 | 0.0 | 0.0 | 0 | 662.0 | 662.0 | 662.0 | 94.6 | 93.9 | 96.0 | 1830.0
 ```
 
-The example above uses the default windows. If you change `--window-short` or `--window-long`, the rendered labels change too.
+The example above uses the default windows. If you change `--window-short` or `--window-long`, the rendered labels change too, and the long-window metrics continue to refer to the configured long window rather than an intrinsic "20m" contract.
 
 ### JSONL
 
@@ -381,7 +385,7 @@ See [examples/sample_summary.csv](examples/sample_summary.csv).
 
 ### Heatmap JSONL
 
-If `--emit-heatmap-json` is enabled, the tool writes machine-friendly snapshots for later notebook or web visualization. Each row includes:
+If `--emit-heatmap-json` is enabled, the tool writes machine-friendly snapshots for later notebook or web visualization. Each row is centered on the configured long window and includes generic window metadata so downstream consumers do not need to assume 20 minutes:
 
 - timestamp
 - host
@@ -389,6 +393,7 @@ If `--emit-heatmap-json` is enabled, the tool writes machine-friendly snapshots 
 - UUID
 - GPU name
 - current power
+- `window_role` and `window_seconds`
 - long-window average power
 - long-window normalized power activity when calibrated
 - long-window low-utilization percentage
@@ -432,6 +437,7 @@ Current release line highlights:
 - low-utilization, idle-state, and power-first observability in one tool
 - JSONL output with role-based and duration-based summaries
 - CSV summaries that include `window_role` and `window_seconds`
+- heatmap JSONL snapshots that center the configured long window while including explicit window metadata
 - configurable-window-aware Prometheus metrics
 - fake NVML backend for simulation and tests
 - Linux-first packaging, systemd unit, and GitHub Actions CI

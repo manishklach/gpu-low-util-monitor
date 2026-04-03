@@ -113,5 +113,10 @@ def test_heatmap_writer_format(tmp_path: Path) -> None:
     writer.write_reports([report])
 
     text = (tmp_path / "gpu_heatmap.jsonl").read_text(encoding="utf-8")
+    assert '"window_role":"long"' in text
+    assert '"window_seconds":1200' in text
+    assert '"avg_power_w_window":205.0' in text
+    assert '"low_util_pct_window":55.0' in text
     assert '"current_power_w":220.0' in text
+    assert '"avg_power_w_long":205.0' in text
     assert '"power_activity_pct_long":22.5' in text

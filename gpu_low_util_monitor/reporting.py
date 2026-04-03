@@ -131,7 +131,12 @@ class ConsoleReporter:
 
 
 class HeatmapJsonWriter:
-    """Append machine-friendly power/behavior snapshots for later visualization."""
+    """Append machine-friendly long-window snapshots for later visualization.
+
+    The export is intentionally centered on the configured long window because
+    it is the repo's headline operational view. The payload includes generic
+    window-aware fields plus compatibility aliases with `_long` suffixes.
+    """
 
     def __init__(self, out_dir: Path, group_by: str = "host") -> None:
         self._path = ensure_directory(out_dir) / "gpu_heatmap.jsonl"
@@ -142,6 +147,7 @@ class HeatmapJsonWriter:
         """Append one heatmap-friendly JSON row per GPU."""
         with self._path.open("a", encoding="utf-8") as handle:
             for report in reports:
+                long_summary = report.long_summary
                 handle.write(
                     dumps_compact_json(
                         {
@@ -152,13 +158,21 @@ class HeatmapJsonWriter:
                             "gpu_index": report.sample.identity.index,
                             "uuid": report.sample.identity.uuid,
                             "gpu_name": report.sample.identity.name,
+                            "window_role": "long",
+                            "window_seconds": long_summary.window_seconds,
                             "current_power_w": report.sample.power_w,
-                            "avg_power_w_long": report.long_summary.avg_power_w_window,
-                            "power_activity_pct_long": report.long_summary.power_activity_pct_window,
-                            "power_pct_of_cap_long": report.long_summary.power_pct_of_cap_window,
-                            "low_util_pct_long": report.long_summary.low_util_pct_window,
-                            "idle_reason_pct_long": report.long_summary.idle_reason_pct_window,
-                            "idle_entries_long": report.long_summary.idle_entries_window,
+                            "avg_power_w_window": long_summary.avg_power_w_window,
+                            "power_activity_pct_window": long_summary.power_activity_pct_window,
+                            "power_pct_of_cap_window": long_summary.power_pct_of_cap_window,
+                            "low_util_pct_window": long_summary.low_util_pct_window,
+                            "idle_reason_pct_window": long_summary.idle_reason_pct_window,
+                            "idle_entries_window": long_summary.idle_entries_window,
+                            "avg_power_w_long": long_summary.avg_power_w_window,
+                            "power_activity_pct_long": long_summary.power_activity_pct_window,
+                            "power_pct_of_cap_long": long_summary.power_pct_of_cap_window,
+                            "low_util_pct_long": long_summary.low_util_pct_window,
+                            "idle_reason_pct_long": long_summary.idle_reason_pct_window,
+                            "idle_entries_long": long_summary.idle_entries_window,
                         }
                     )
                     + "\n"

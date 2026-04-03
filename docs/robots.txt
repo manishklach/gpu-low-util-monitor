@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://manishklach.github.io/gpu-low-util-monitor/sitemap.xml

@@ -25,7 +25,7 @@ LOGGER = logging.getLogger(__name__)
 def build_parser() -> argparse.ArgumentParser:
     """Create the CLI argument parser."""
     parser = argparse.ArgumentParser(
-        description="Monitor low-utilization time and idle-state behavior on NVIDIA datacenter GPUs.",
+        description="Monitor low-utilization time, idle-state behavior, and power-based activity on NVIDIA datacenter GPUs.",
         epilog=(
             "This tool measures low-utilization, idle-state behavior, and power-based activity "
             "over time using documented NVIDIA signals. It provides a practical proxy for GPU "
@@ -36,28 +36,61 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--interval", type=float, default=1.0, help="Polling interval in seconds.")
-    parser.add_argument("--window-short", type=int, default=60, help="Short rolling window in seconds, typically 60.")
-    parser.add_argument("--window-long", type=int, default=1200, help="Long rolling window in seconds, typically 1200.")
+    parser.add_argument(
+        "--window-short",
+        type=int,
+        default=60,
+        help="Operator-configurable short rolling window in seconds. Default: 60.",
+    )
+    parser.add_argument(
+        "--window-long",
+        type=int,
+        default=1200,
+        help="Operator-configurable long rolling window in seconds. Default: 1200.",
+    )
     parser.add_argument("--out-dir", type=Path, default=Path("./out"), help="Output directory for JSONL and CSV.")
     parser.add_argument("--jsonl", action="store_true", help="Write one JSONL row per GPU sample with rolling summaries.")
-    parser.add_argument("--csv", action="store_true", help="Write periodic rolling-summary CSV snapshots.")
+    parser.add_argument("--csv", action="store_true", help="Write periodic CSV snapshots for the configured short and long windows.")
     parser.add_argument("--console-refresh", type=float, default=10.0, help="Console refresh interval in seconds.")
     parser.add_argument("--once", action="store_true", help="Run a single sampling pass to validate field availability and current state.")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging.")
-    parser.add_argument("--prometheus-port", type=int, default=None, help="Serve current rolling summaries as Prometheus gauges.")
+    parser.add_argument(
+        "--prometheus-port",
+        type=int,
+        default=None,
+        help="Serve current rolling summaries as Prometheus gauges labeled by window role and window duration.",
+    )
     parser.add_argument("--simulate", action="store_true", help="Use the fake NVML backend for local simulation.")
     parser.add_argument(
         "--power-mode",
         choices=("off", "raw", "calibrated"),
         default="raw",
-        help="Choose whether power metrics are off, emitted as raw observability signals, or emitted with calibrated normalization.",
+        help="Choose whether power metrics are off, emitted as raw documented telemetry, or emitted with a repo-defined calibrated power-activity proxy.",
     )
-    parser.add_argument("--idle-baseline-w", type=float, default=None, help="Optional idle-baseline power in watts for normalized power activity.")
-    parser.add_argument("--busy-reference-w", type=float, default=None, help="Optional busy-reference power in watts for normalized power activity.")
+    parser.add_argument(
+        "--idle-baseline-w",
+        type=float,
+        default=None,
+        help="Optional idle-baseline power in watts for the repo-defined normalized power-activity proxy.",
+    )
+    parser.add_argument(
+        "--busy-reference-w",
+        type=float,
+        default=None,
+        help="Optional busy-reference power in watts for the repo-defined normalized power-activity proxy.",
+    )
     parser.add_argument("--power-calibration-file", type=Path, default=None, help="Optional JSON file with default and per-GPU power calibration overrides.")
-    parser.add_argument("--emit-heatmap-json", action="store_true", help="Write machine-friendly heatmap JSONL snapshots for later visualization.")
+    parser.add_argument(
+        "--emit-heatmap-json",
+        action="store_true",
+        help="Write machine-friendly JSONL snapshots for later heatmap or notebook visualization.",
+    )
     parser.add_argument("--heatmap-group-by", choices=("host", "gpu"), default="host", help="Grouping hint to include in heatmap JSONL snapshots.")
-    parser.add_argument("--no-power-normalization", action="store_true", help="Disable normalized power-activity output even if calibration is available.")
+    parser.add_argument(
+        "--no-power-normalization",
+        action="store_true",
+        help="Disable the repo-defined normalized power-activity proxy even if calibration is available.",
+    )
     parser.add_argument(
         "--fail-on-unsupported",
         action="store_true",

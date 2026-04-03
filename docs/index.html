@@ -14,8 +14,10 @@
     content="GPU underutilization,NVIDIA H100 monitoring,NVIDIA H200 monitoring,NVML low utilization,GPU idle state monitoring,gpu-low-util-monitor,nvidia-smi utilization,GPU power draw monitoring,GPU observability,datacenter GPU monitoring"
   />
   <meta name="author" content="Manish Lachwani" />
-  <meta name="robots" content="index,follow" />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <meta name="theme-color" content="#0b1020" />
   <link rel="canonical" href="https://manishklach.github.io/gpu-low-util-monitor/" />
+  <meta property="og:locale" content="en_US" />
 
   <meta property="og:type" content="article" />
   <meta property="og:title" content="How to Measure GPU Underutilization on NVIDIA H100 and H200" />
@@ -25,6 +27,14 @@
   />
   <meta property="og:url" content="https://manishklach.github.io/gpu-low-util-monitor/" />
   <meta property="og:site_name" content="Manish Lachwani" />
+  <meta property="og:image" content="https://manishklach.github.io/gpu-low-util-monitor/og-card.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="How to Measure GPU Underutilization on NVIDIA H100 and H200" />
+  <meta property="article:author" content="Manish Lachwani" />
+  <meta property="article:published_time" content="2026-04-03" />
+  <meta property="article:modified_time" content="2026-04-03" />
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="How to Measure GPU Underutilization on NVIDIA H100 and H200" />
@@ -32,6 +42,8 @@
     name="twitter:description"
     content="Point-in-time GPU busy metrics miss a lot. Rolling-window low-util time, sampled idle state, and power draw tell a much better story."
   />
+  <meta name="twitter:image" content="https://manishklach.github.io/gpu-low-util-monitor/og-card.png" />
+  <meta name="twitter:image:alt" content="How to Measure GPU Underutilization on NVIDIA H100 and H200" />
 
   <script type="application/ld+json">
   {
@@ -47,7 +59,59 @@
       "@type": "Person",
       "name": "Manish Lachwani"
     },
-    "mainEntityOfPage": "https://manishklach.github.io/gpu-low-util-monitor/"
+    "mainEntityOfPage": "https://manishklach.github.io/gpu-low-util-monitor/",
+    "datePublished": "2026-04-03",
+    "dateModified": "2026-04-03",
+    "keywords": [
+      "GPU underutilization",
+      "NVIDIA H100 monitoring",
+      "NVIDIA H200 monitoring",
+      "NVML low utilization",
+      "GPU idle state monitoring",
+      "GPU power draw monitoring",
+      "GPU observability"
+    ],
+    "image": "https://manishklach.github.io/gpu-low-util-monitor/og-card.png"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Is GPU power a good proxy for utilization?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Often yes, as a first-order indicator. Power is especially useful for seeing whether GPUs look dark, dim, or bright across a fleet. But power alone is still a proxy, not perfect truth."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is NVML low-utilization policy?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The repo uses NVIDIA's documented low-utilization perf-policy signal as a key source for rolling-window low-utilization measurement."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can this detect idle GPUs?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, in a practical observability sense. The repo samples the current Idle event reason and derives idle-entry counts from polling, which makes it useful for spotting repeated idle episodes and bursty dispatch patterns."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does this prove exact economic waste?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. It is a practical proxy for GPU underuse, workload starvation, underfeeding, or dark/dim GPU behavior, not an exact financial truth engine."
+        }
+      }
+    ]
   }
   </script>
 
@@ -505,10 +569,6 @@
         <a href="https://github.com/manishklach/gpu-low-util-monitor" target="_blank" rel="noopener noreferrer">
           manishklach/gpu-low-util-monitor
         </a>
-      </p>
-      <p class="small">
-        Suggested SEO title: <strong>How to Measure GPU Underutilization on NVIDIA H100 and H200</strong><br />
-        Suggested meta description: Learn how to detect low-utilization, idle-state behavior, and power-based GPU activity on NVIDIA H100/H200 using NVML, nvidia-smi, and rolling-window telemetry.
       </p>
     </section>
   </main>
