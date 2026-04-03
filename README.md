@@ -1,5 +1,7 @@
 # gpu-low-util-monitor
 
+![CI](https://github.com/manishklach/gpu-low-util-monitor/actions/workflows/ci.yml/badge.svg)
+
 `gpu-low-util-monitor` is a Linux-first observability tool for NVIDIA datacenter GPUs, with H100 and H200 as the initial target. It measures low-utilization time, idle-state behavior, and supporting telemetry over rolling windows using documented NVIDIA NVML signals. This tool measures low-utilization and idle-state behavior over time using documented NVIDIA signals. It provides a practical proxy for GPU underuse, workload starvation, or underfeeding, but it should not claim omniscient knowledge of economic waste or all causes of low activity.
 
 ## Why This Exists
@@ -27,6 +29,7 @@ Corroborating metrics:
 - long-window sampled Idle percentage
 - long-window Idle entry count
 - long-window average GPU utilization
+
 The design intentionally treats low-utilization over time as the primary KPI, not instantaneous utilization. The default short and long windows are 60 seconds and 1200 seconds, but both are operator-configurable at runtime.
 
 ## Metric Semantics
@@ -273,6 +276,11 @@ If `--prometheus-port` is set and `prometheus-client` is installed, the exporter
 
 These reflect the current rolling summaries and are labeled by GPU index, UUID, name, `window_role`, and `window_seconds`.
 
+Compatibility note:
+
+- Earlier iterations of the repository used hardcoded metric names such as `gpu_low_util_pct_1m` and `gpu_low_util_pct_20m`
+- The current exporter uses configurable-window-aware metric names plus labels so 60-second and 1200-second defaults are not treated as fixed product semantics
+
 ## Simulation Mode
 
 The fake NVML backend supports realistic local validation scenarios:
@@ -292,6 +300,17 @@ Simulation mode is intended for development, metric validation, and documentatio
 - Add summary snapshots and fleet-level aggregation helpers
 - Add examples for correlating low-utilization time with scheduler and input-pipeline telemetry
 - Add more hardware validation notes for future NVIDIA datacenter GPUs
+
+## Release Notes
+
+Current release line highlights:
+
+- configurable short and long rolling windows
+- JSONL output with role-based and duration-based summaries
+- CSV summaries that include `window_role` and `window_seconds`
+- configurable-window-aware Prometheus metrics
+- fake NVML backend for simulation and tests
+- Linux-first packaging, systemd unit, and GitHub Actions CI
 
 ## References
 
