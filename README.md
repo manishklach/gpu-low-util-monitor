@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/manishklach/gpu-low-util-monitor/actions/workflows/ci.yml/badge.svg)
 
-`gpu-low-util-monitor` is a Linux-first observability tool for NVIDIA datacenter GPUs, with NVIDIA H100 monitoring and NVIDIA H200 monitoring as the initial target use cases. It measures low-utilization, idle-state behavior, and power-based activity over time using documented NVIDIA signals. It provides a practical proxy for GPU underuse, workload starvation, underfeeding, or dark/dim GPUs, but it should not claim omniscient knowledge of economic waste or all causes of low activity.
+`gpu-low-util-monitor` is a Linux-first observability tool for NVIDIA datacenter GPUs, with NVIDIA H100 and H200 as the initial target use cases. It measures low-utilization, idle-state behavior, and power-based activity over time using documented NVIDIA signals. It provides a practical proxy for GPU underuse, workload starvation, underfeeding, or dark/dim GPUs, but it should not claim omniscient knowledge of economic waste or all causes of low activity.
 
 ## Why This Exists
 
@@ -51,6 +51,17 @@ Complementary power/activity metrics:
 - short-window and long-window sampled thermal-limit and power-limit percentages when supported
 
 The design intentionally treats low-utilization over time as the primary KPI, not instantaneous utilization. The default short and long windows are 60 seconds and 1200 seconds, but both are operator-configurable at runtime and should be interpreted as defaults rather than fixed product semantics.
+
+In public docs, the clean mental model is:
+
+- `low_util_pct_short` and `low_util_pct_long`
+- `idle_reason_pct_short` and `idle_reason_pct_long`
+- `idle_entries_short` and `idle_entries_long`
+- `avg_gpu_util_short` and `avg_gpu_util_long`
+- `avg_power_w_short` and `avg_power_w_long`
+- `power_activity_pct_short` and `power_activity_pct_long`
+
+Some outputs and examples still show default-style labels such as `1m` and `20m` for readability or backward compatibility. Those should be read as the configured short and long windows, whose defaults are 60 seconds and 1200 seconds.
 
 NVML is the right default for this repo because it is direct, documented, and already available anywhere `nvidia-smi` works. DCGM remains relevant for fleet aggregation and managed environments; that is why it appears in the references and roadmap, even though the current implementation path stays NVML-first.
 
@@ -111,7 +122,7 @@ Interpretation:
 Power is treated as a strong first-order activity proxy, not a perfect truth engine. It is complementary to low-utilization and idle-state telemetry:
 
 - power tells you that a GPU looks dark, dim, or bright
-- low-util / idle telemetry helps explain how often and in what pattern that is happening
+- low-util / idle telemetry helps explain the pattern and frequency behind that behavior
 
 ### `current_power_w`
 
@@ -439,13 +450,13 @@ sudo systemctl enable --now gpu-low-util-monitor.service
 sudo systemctl status gpu-low-util-monitor.service
 ```
 
-## Example Outputs
-
 ## Illustrative Case Study
 
 Illustrative scenario, not a claimed production result:
 
 Standard monitoring showed modest GPU utilization and no obvious outage. `gpu-low-util-monitor` then showed that the GPU spent a large share of the configured long window in documented low-utilization policy, re-entered Idle repeatedly, and looked relatively dim in rolling power. That combination points more toward host-side feeding gaps or bursty dispatch than a healthy steady-state workload. If thermal-limit or power-limit sampled percentages were also elevated, the operator would have stronger evidence to investigate cooling or policy pressure instead of workload starvation alone.
+
+## Example Outputs
 
 ### Console
 
@@ -455,7 +466,7 @@ gpu idx | name | low_util_short(1m) | low_util_long(20m) | idle_pct_short(1m) | 
 1 | NVIDIA H200 141GB HBM3e | 2.0 | 2.0 | 0.0 | 0.0 | 0 | 662.0 | 662.0 | 662.0 | 94.6 | 93.9 | 96.0 | 1830.0
 ```
 
-The example above uses the default windows. If you change `--window-short` or `--window-long`, the rendered labels change too, and the long-window metrics continue to refer to the configured long window rather than an intrinsic "20m" contract.
+The example above uses the default windows. If you change `--window-short` or `--window-long`, the rendered labels change too. In other words, `low_util_long(20m)` in this example should be read as "the configured long-window low-utilization percentage," not as a fixed product constant.
 
 ### JSONL
 
