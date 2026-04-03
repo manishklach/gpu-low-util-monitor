@@ -12,6 +12,10 @@ Datacenter GPU observability is often too snapshot-heavy. A point-in-time GPU bu
 
 Instantaneous utilization is useful context, but it is not the headline KPI here. Short bursts of work can make a GPU look busy in a snapshot while still leaving a large share of the recent short or long window in documented low-utilization policy, sampled idle-state presence, or low power. Rolling-window telemetry is a better fit for workload starvation, bursty scheduling, and underfed GPUs than a single busy percentage sampled at one moment.
 
+## Quick Story
+
+A common operator experience looks like this: `nvidia-smi` shows a GPU hovering around 70% busy, so at first glance it does not look like a problem. But the rolling-window view can still show high long-window low-utilization percentage, repeated Idle entries, and dim average power. That combination suggests the GPU is active in bursts rather than steadily fed. The point is not that the instantaneous busy number is wrong. The point is that it is incomplete.
+
 ## What It Measures
 
 The collector uses NVIDIA NVML as the primary source of truth and relies only on documented fields and APIs. The current implementation is NVML-first; DCGM power and energy fields are referenced and positioned as a future optional integration path rather than a required dependency in this release.
@@ -45,6 +49,8 @@ Complementary power/activity metrics:
 - short-window and long-window energy accumulation when cumulative energy is available
 
 The design intentionally treats low-utilization over time as the primary KPI, not instantaneous utilization. The default short and long windows are 60 seconds and 1200 seconds, but both are operator-configurable at runtime and should be interpreted as defaults rather than fixed product semantics.
+
+NVML is the right default for this repo because it is direct, documented, and already available anywhere `nvidia-smi` works. DCGM remains relevant for fleet aggregation and managed environments; that is why it appears in the references and roadmap, even though the current implementation path stays NVML-first.
 
 ## Behavioral Metrics
 
@@ -197,22 +203,6 @@ Common interpretations:
 - This tool measures observables, not root-cause certainty
 - The normalization of the low-utilization counter and cumulative energy counter should still be validated on the target driver branch during hardware bring-up
 
-## How It Works
-
-At each poll, the collector:
-
-1. Captures a monotonic timestamp
-2. Reads one sample per GPU through the NVML adapter
-3. Reads the cumulative low-utilization perf-policy counter when supported
-4. Reads the current clocks event reasons bitmask and determines whether `Idle` is active when supported
-5. Collects utilization, clocks, raw power, power cap, and cumulative energy when available
-6. Appends the sample to a time-based rolling window
-7. Computes rolling summaries for the short and long windows, including behavioral and power metrics
-8. Optionally applies power normalization when valid calibration is available
-9. Emits JSONL, CSV, console output, heatmap JSONL snapshots, and optional Prometheus gauges
-
-Windows are time-based, not sample-count-based, so interval jitter is handled correctly. Short and long windows are configurable; 60 seconds and 1200 seconds are defaults only.
-
 ## Installation
 
 ```bash
@@ -220,6 +210,8 @@ python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev,nvml]"
 ```
+
+Today the easiest path is still cloning the repo and installing it locally. The project metadata is already structured so a future PyPI package is straightforward, but this repository should not imply that a published package exists unless and until one is actually released.
 
 Simulation only:
 
@@ -295,6 +287,13 @@ python -m gpu_low_util_monitor --once --verbose
 
 The `--window-short` and `--window-long` values are operator-configurable. The defaults are 60 seconds and 1200 seconds, but the semantics of the tool are not tied to those particular durations. Public examples often show 1 minute and 20 minutes because they are sensible defaults, not because they are immutable product constants.
 
+Fastest way to try the tool without hardware:
+
+```bash
+pip install -e ".[dev]"
+python -m gpu_low_util_monitor --simulate --once --verbose
+```
+
 Power-specific options:
 
 - `--power-mode off|raw|calibrated`
@@ -304,6 +303,16 @@ Power-specific options:
 - `--emit-heatmap-json`
 - `--heatmap-group-by host|gpu`
 - `--no-power-normalization`
+
+## How It Works
+
+At each poll, the collector:
+
+1. Captures a monotonic timestamp and collects one documented NVML sample per GPU
+2. Updates time-based rolling windows for low-utilization, sampled Idle state, utilization, clocks, power, and energy where available
+3. Computes short-window and long-window summaries, optionally adds calibrated power normalization, then emits JSONL, CSV, console, heatmap, and Prometheus outputs
+
+The windows are time-based rather than sample-count-based, so interval jitter is handled correctly. Short and long windows remain operator-configurable; 60 seconds and 1200 seconds are defaults only.
 
 ## Running Later on H100/H200
 
@@ -421,13 +430,18 @@ These references are the basis for the repository's semantics:
 
 ## Roadmap
 
+### Actively Working On
+
 - Validate documented field support and counter units across real H100 and H200 driver stacks
 - Validate total energy support and scaling across driver branches and supported GPU families
+- Add more hardware validation notes for future NVIDIA datacenter GPUs
+
+### Backlog
+
 - Add richer Prometheus labeling and scrape examples
 - Add summary snapshots and fleet-level aggregation helpers
 - Add examples for correlating low-utilization time with scheduler and input-pipeline telemetry
 - Add an optional DCGM-backed collector path for environments that want DCGM field integration for power and energy
-- Add more hardware validation notes for future NVIDIA datacenter GPUs
 
 ## Release Notes
 
@@ -441,3 +455,7 @@ Current release line highlights:
 - configurable-window-aware Prometheus metrics
 - fake NVML backend for simulation and tests
 - Linux-first packaging, systemd unit, and GitHub Actions CI
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup and contribution guidance.

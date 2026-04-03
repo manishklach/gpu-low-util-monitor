@@ -10,10 +10,27 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-  {name = "OpenAI Codex"}
+  {name = "Manish Lachwani"}
+]
+keywords = ["nvidia", "nvml", "gpu-monitoring", "gpu-observability", "h100", "h200"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: System Administrators",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: System :: Monitoring",
+  "Topic :: System :: Systems Administration",
 ]
 dependencies = [
 ]
+
+[project.urls]
+Homepage = "https://github.com/manishklach/gpu-low-util-monitor"
+Repository = "https://github.com/manishklach/gpu-low-util-monitor"
+Issues = "https://github.com/manishklach/gpu-low-util-monitor/issues"
 
 [project.optional-dependencies]
 nvml = [

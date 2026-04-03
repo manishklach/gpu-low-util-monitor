@@ -81,34 +81,34 @@
     "mainEntity": [
       {
         "@type": "Question",
-        "name": "Is GPU power a good proxy for utilization?",
+        "name": "How is this different from DCGM?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Often yes, as a first-order indicator. Power is especially useful for seeing whether GPUs look dark, dim, or bright across a fleet. But power alone is still a proxy, not perfect truth."
+          "text": "This repository is NVML-first today. That makes it a direct fit anywhere nvidia-smi and NVML are already available. DCGM is still relevant for fleet aggregation and managed environments, which is why it appears in the roadmap and references, but you do not need to wait for DCGM support to use the current tool."
         }
       },
       {
         "@type": "Question",
-        "name": "What is NVML low-utilization policy?",
+        "name": "What polling interval should I use?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "The repo uses NVIDIA's documented low-utilization perf-policy signal as a key source for rolling-window low-utilization measurement."
+          "text": "The default 1-second interval is a sensible starting point for most hosts. Shorter intervals can capture more brief idle episodes but cost more polling overhead. Longer intervals are lighter but can miss short false-to-true Idle transitions."
         }
       },
       {
         "@type": "Question",
-        "name": "Can this detect idle GPUs?",
+        "name": "Is GPU power enough on its own?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes, in a practical observability sense. The repo samples the current Idle event reason and derives idle-entry counts from polling, which makes it useful for spotting repeated idle episodes and bursty dispatch patterns."
+          "text": "No. Power is a strong first-order activity proxy and especially useful for dark or dim fleet heat maps, but it is still a proxy. The repo combines power with low-utilization policy time and sampled Idle behavior so operators get a stronger picture than any single metric provides."
         }
       },
       {
         "@type": "Question",
-        "name": "Does this prove exact economic waste?",
+        "name": "Can I use this without H100 or H200 hardware yet?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No. It is a practical proxy for GPU underuse, workload starvation, underfeeding, or dark/dim GPU behavior, not an exact financial truth engine."
+          "text": "Yes. The repository includes simulation mode and a fake NVML backend so you can validate rolling-window math, output schemas, and power behavior locally before running on a real NVIDIA datacenter GPU host."
         }
       }
     ]
@@ -363,6 +363,25 @@
     </section>
 
     <section class="section">
+      <h2>A before-and-after story</h2>
+      <p>
+        Imagine a GPU that looks roughly 70% busy in <code>nvidia-smi</code>. That sounds acceptable until the
+        rolling-window view shows something else: long-window low-utilization stays elevated, Idle entries keep
+        climbing, and average power looks dim relative to the host's normal busy range.
+      </p>
+      <p>
+        That changes the operator question from "is the job running?" to "is the GPU actually being fed steadily?"
+        In practice, that is often where you find bursty dispatch, small batches, host-side stalls, input bubbles,
+        or otherwise underfed GPUs.
+      </p>
+      <p>
+        Point-in-time GPU busy metrics can miss bursty dispatch, host-side stalls, short idle gaps, and underfed
+        pipelines. Rolling-window low-utilization, sampled Idle-state behavior, and power telemetry give a better
+        picture of whether the GPU is doing meaningful work over time.
+      </p>
+    </section>
+
+    <section class="section">
       <h2>Why point-in-time GPU utilization is not enough</h2>
       <p>
         A GPU can look "busy enough" in a snapshot while still spending a meaningful share of
@@ -478,6 +497,21 @@
     </section>
 
     <section class="section">
+      <h2>Example output</h2>
+      <p>
+        The repository becomes much more tangible once you look at a real summary row. Here is the same style of
+        console snapshot used in the README, showing a dimmer H100 beside a bright busy H200:
+      </p>
+      <pre><code>gpu idx | name | low_util_short(1m) | low_util_long(20m) | idle_pct_short(1m) | idle_pct_long(20m) | idle_entries_long(20m) | current_power_w | avg_power_short(1m) | avg_power_long(20m) | power_pct_cap_long(20m) | power_activity_long(20m) | util_long(20m) | sm_clk_long(20m)
+0 | NVIDIA H100 80GB HBM3 | 65.8 | 67.1 | 30.5 | 33.2 | 49 | 212.0 | 218.6 | 216.1 | 30.9 | 22.0 | 27.4 | 1008.8
+1 | NVIDIA H200 141GB HBM3e | 2.0 | 2.0 | 0.0 | 0.0 | 0 | 662.0 | 662.0 | 662.0 | 94.6 | 93.9 | 96.0 | 1830.0</code></pre>
+      <p>
+        The left-hand GPU is not simply "idle." It is dim, frequently low-util, and repeatedly re-entering Idle.
+        The right-hand GPU looks electrically bright and behaviorally steady.
+      </p>
+    </section>
+
+    <section class="section">
       <h2>What this repo is and is not</h2>
       <p>
         This project is compelling because it is specific. It is not "yet another GPU monitor."
@@ -516,11 +550,20 @@
       <h2>Try the repo</h2>
       <p>
         If you want to detect dark, dim, bursty, or underfed GPUs instead of relying only on
-        point-in-time busy metrics, check out the repository:
+        point-in-time busy metrics, you can try the repo locally in a minute:
       </p>
-      <pre><code>https://github.com/manishklach/gpu-low-util-monitor</code></pre>
+      <pre><code>git clone https://github.com/manishklach/gpu-low-util-monitor
+cd gpu-low-util-monitor
+pip install -e ".[dev]"
+python -m gpu_low_util_monitor --simulate --once --verbose</code></pre>
       <p>
-        It is a strong example of how to talk about GPU underutilization honestly:
+        Repo:
+        <a href="https://github.com/manishklach/gpu-low-util-monitor" target="_blank" rel="noopener noreferrer">
+          github.com/manishklach/gpu-low-util-monitor
+        </a>
+      </p>
+      <p>
+        It is a strong example of how to talk about GPU underuse honestly:
         not as a universal truth claim, but as a rolling-window observability signal
         grounded in documented NVIDIA behavior.
       </p>
@@ -530,37 +573,49 @@
       <h2>FAQ</h2>
 
       <div class="faq-item">
-        <h3>Is GPU power a good proxy for utilization?</h3>
+        <h3>How is this different from DCGM?</h3>
         <p>
-          Often yes, as a first-order indicator. Power is especially useful for seeing whether GPUs
-          look dark, dim, or bright across a fleet. But power alone is still a proxy, not perfect truth.
+          This repository is NVML-first today. That makes it a direct fit anywhere <code>nvidia-smi</code> and NVML
+          are already available. DCGM is still relevant for fleet aggregation and managed environments, which is why it
+          appears in the roadmap and references, but you do not need to wait for DCGM support to use the current tool.
         </p>
       </div>
 
       <div class="faq-item">
-        <h3>What is NVML low-utilization policy?</h3>
+        <h3>What polling interval should I use?</h3>
         <p>
-          The repo uses NVIDIA's documented low-utilization perf-policy signal as a key source for
-          rolling-window low-utilization measurement.
+          The default 1-second interval is a sensible starting point for most hosts. Shorter intervals can capture
+          more brief idle episodes but cost more polling overhead. Longer intervals are lighter but can miss short
+          <code>false -&gt; true</code> Idle transitions.
         </p>
       </div>
 
       <div class="faq-item">
-        <h3>Can this detect idle GPUs?</h3>
+        <h3>Is GPU power enough on its own?</h3>
         <p>
-          Yes, in a practical observability sense. The repo samples the current Idle event reason
-          and derives idle-entry counts from polling, which makes it useful for spotting repeated
-          idle episodes and bursty dispatch patterns.
+          No. Power is a strong first-order activity proxy and especially useful for dark or dim fleet heat maps,
+          but it is still a proxy. The repo combines power with low-utilization policy time and sampled Idle behavior
+          so operators get a stronger picture than any single metric provides.
         </p>
       </div>
 
       <div class="faq-item">
-        <h3>Does this prove exact economic waste?</h3>
+        <h3>Can I use this without H100 or H200 hardware yet?</h3>
         <p>
-          No. It is a practical proxy for GPU underuse, workload starvation, underfeeding, or dark/dim
-          GPU behavior, not an exact financial truth engine.
+          Yes. The repository includes simulation mode and a fake NVML backend so you can validate rolling-window
+          math, output schemas, and power behavior locally before running on a real NVIDIA datacenter GPU host.
         </p>
       </div>
+    </section>
+
+    <section class="section">
+      <h2>References</h2>
+      <ul>
+        <li><a href="https://docs.nvidia.com/deploy/nvml-api/index.html" target="_blank" rel="noopener noreferrer">NVIDIA NVML API Reference Guide</a></li>
+        <li><a href="https://docs.nvidia.com/deploy/nvml-api/group__nvmlFieldValueEnums.html" target="_blank" rel="noopener noreferrer">NVIDIA NVML Field Value Enums and Field IDs</a></li>
+        <li><a href="https://docs.nvidia.com/deploy/nvml-api/group__nvmlClocksEventReasons.html" target="_blank" rel="noopener noreferrer">NVIDIA NVML Clocks Event Reasons</a></li>
+        <li><a href="https://docs.nvidia.com/deploy/nvidia-smi/index.html" target="_blank" rel="noopener noreferrer">NVIDIA nvidia-smi Documentation</a></li>
+      </ul>
     </section>
 
     <section class="footer">
