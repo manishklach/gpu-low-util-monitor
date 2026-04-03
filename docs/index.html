@@ -279,6 +279,16 @@
       overflow: hidden;
     }
 
+    .visual-frame {
+      width: 100%;
+      max-width: 860px;
+      aspect-ratio: 680 / 400;
+      border: 0;
+      display: block;
+      border-radius: 14px;
+      background: transparent;
+    }
+
     .visual img {
       display: block;
       width: 100%;
@@ -345,6 +355,10 @@
         border-radius: 16px;
       }
 
+      .visual-frame {
+        border-radius: 10px;
+      }
+
       .visual img {
         border-radius: 10px;
       }
@@ -393,7 +407,12 @@
         but a practical rolling-window observability signal grounded in documented NVIDIA behavior.
       </div>
       <div class="visual">
-        <img src="visual-overview.svg?v=20260403b" alt="Overview of gpu-low-util-monitor signals, rolling windows, and operator view" />
+        <iframe
+          class="visual-frame"
+          src="gpu_diagram.html?v=20260403c"
+          title="Overview of gpu-low-util-monitor signals, rolling windows, and operator view"
+          loading="lazy">
+        </iframe>
       </div>
     </section>
 

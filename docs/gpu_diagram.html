@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0f1724;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 40px;
+  }
+  .card {
+    background: #141f30;
+    border: 1px solid #1e2d42;
+    border-radius: 16px;
+    padding: 40px 44px 36px;
+    max-width: 860px;
+    width: 100%;
+  }
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: #4fc4a0;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #e8edf5;
+    line-height: 1.25;
+    margin-bottom: 36px;
+  }
+  .pipeline {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin-bottom: 28px;
+  }
+  .box {
+    flex: 1;
+    border-radius: 12px;
+    padding: 20px 20px 22px;
+  }
+  .box-teal {
+    background: #0d2b26;
+    border: 1px solid #1a4a40;
+  }
+  .box-purple {
+    background: #1a1a38;
+    border: 1px solid #2d2d5c;
+  }
+  .box-coral {
+    background: #2b1a18;
+    border: 1px solid #4a2820;
+  }
+  .box-title {
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .box-teal .box-title   { color: #4fc4a0; }
+  .box-purple .box-title { color: #9b8fe8; }
+  .box-coral .box-title  { color: #e08070; }
+  .box-items {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .box-items li {
+    font-size: 13px;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .box-teal   .box-items li { color: #7dd9bc; }
+  .box-purple .box-items li { color: #b0a4f0; }
+  .box-coral  .box-items li { color: #e8a090; }
+
+  .arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    flex-shrink: 0;
+    padding-top: 28px;
+    color: #3a4d62;
+    font-size: 20px;
+  }
+  .glance {
+    background: #111c2b;
+    border: 1px solid #1e2d42;
+    border-radius: 10px;
+    padding: 18px 22px;
+  }
+  .glance-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4a8fc4;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+  .glance-main {
+    font-size: 14px;
+    color: #c8d4e0;
+    line-height: 1.6;
+    margin-bottom: 4px;
+  }
+  .glance-sub {
+    font-size: 13px;
+    color: #5a7090;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="eyebrow">GPU low-utilization monitoring</div>
+  <div class="title">Rolling-window observability<br>for dark, dim, and underfed GPUs</div>
+
+  <div class="pipeline">
+    <div class="box box-teal">
+      <div class="box-title">Signals in</div>
+      <ul class="box-items">
+        <li>NVML or DCGM exporter</li>
+        <li>Low-util policy time</li>
+        <li>Idle-state sampling</li>
+        <li>Power &amp; energy telemetry</li>
+      </ul>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="box box-purple">
+      <div class="box-title">Rolling windows</div>
+      <ul class="box-items">
+        <li>Configurable short &amp; long</li>
+        <li>Low-util percentage</li>
+        <li>Idle sampled % &amp; entries</li>
+        <li>Power corroboration</li>
+      </ul>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <div class="box box-coral">
+      <div class="box-title">Operator view</div>
+      <ul class="box-items">
+        <li>Long-window low-util KPI</li>
+        <li>Dark / dim / bright signal</li>
+        <li>Underfeeding or burstiness</li>
+        <li>Not a root-cause engine</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="glance">
+    <div class="glance-label">At a glance</div>
+    <div class="glance-main">Standard monitoring can show a GPU as moderately busy while rolling windows reveal high low-util time, repeated idle entries, and dim power.</div>
+    <div class="glance-sub">Practical observability for H100, H200, and similar datacenter GPUs — not omniscient truth.</div>
+  </div>
+</div>
+</body>
+</html>
