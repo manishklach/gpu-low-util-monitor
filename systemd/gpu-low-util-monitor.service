@@ -1,0 +1,14 @@
+[Unit]
+Description=GPU Low Utilization Monitor
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/gpu-low-util-monitor
+ExecStart=/usr/bin/python3 -m gpu_low_util_monitor --interval 1 --window-short 60 --window-long 1200 --out-dir /var/log/gpu-low-util-monitor --jsonl --csv --console-refresh 10
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

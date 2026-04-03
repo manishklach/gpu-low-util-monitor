@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gpu-low-util-monitor"
+version = "0.1.0"
+description = "Monitor low-utilization time, idle-state episodes, and workload starvation signals on NVIDIA datacenter GPUs."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+  {name = "OpenAI Codex"}
+]
+dependencies = [
+]
+
+[project.optional-dependencies]
+nvml = [
+  "nvidia-ml-py>=12.560.30",
+]
+dev = [
+  "pytest>=8.2.0",
+]
+prometheus = [
+  "prometheus-client>=0.20.0",
+]
+
+[project.scripts]
+gpu-low-util-monitor = "gpu_low_util_monitor.cli:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gpu_low_util_monitor*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

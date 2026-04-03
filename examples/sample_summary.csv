@@ -1,0 +1,3 @@
+wall_time_iso,gpu_index,uuid,name,window_seconds,low_util_pct_window,idle_reason_pct_window,idle_entries_window,avg_gpu_util_window,avg_sm_clock_mhz_window,avg_mem_clock_mhz_window,avg_power_w_window
+2026-04-03T16:00:00+00:00,0,GPU-sim-0000,NVIDIA H100 80GB HBM3,1200,67.1,33.2,49,27.4,1008.8,1593.0,216.1
+2026-04-03T16:00:00+00:00,1,GPU-sim-0001,NVIDIA H200 141GB HBM3e,1200,2.0,0.0,0,96.0,1830.0,1593.0,662.0

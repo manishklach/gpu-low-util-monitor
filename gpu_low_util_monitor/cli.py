@@ -1,0 +1,101 @@
+"""CLI entry point for gpu-low-util-monitor."""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import time
+from pathlib import Path
+
+from gpu_low_util_monitor.collector import CollectorConfig, GPUCollector
+from gpu_low_util_monitor.nvml_adapter import FakeNVMLBackend, RealNVMLBackend
+from gpu_low_util_monitor.reporting import ConsoleReporter, CsvSummaryWriter, JsonlWriter, PrometheusExporter
+from gpu_low_util_monitor.util import configure_logging
+
+LOGGER = logging.getLogger(__name__)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Create the CLI argument parser."""
+    parser = argparse.ArgumentParser(
+        description="Monitor low-utilization time and idle-state behavior on NVIDIA datacenter GPUs."
+    )
+    parser.add_argument("--interval", type=float, default=1.0, help="Polling interval in seconds.")
+    parser.add_argument("--window-short", type=int, default=60, help="Short rolling window in seconds.")
+    parser.add_argument("--window-long", type=int, default=1200, help="Long rolling window in seconds.")
+    parser.add_argument("--out-dir", type=Path, default=Path("./out"), help="Output directory for JSONL and CSV.")
+    parser.add_argument("--jsonl", action="store_true", help="Write one JSONL row per GPU sample with rolling summaries.")
+    parser.add_argument("--csv", action="store_true", help="Write periodic rolling-summary CSV snapshots.")
+    parser.add_argument("--console-refresh", type=float, default=10.0, help="Console refresh interval in seconds.")
+    parser.add_argument("--once", action="store_true", help="Run a single sampling pass for debug validation.")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging.")
+    parser.add_argument("--prometheus-port", type=int, default=None, help="Serve current rolling summaries as Prometheus gauges.")
+    parser.add_argument("--simulate", action="store_true", help="Use the fake NVML backend for local simulation.")
+    parser.add_argument(
+        "--fail-on-unsupported",
+        action="store_true",
+        help="Fail immediately when an optional documented NVML field is unavailable.",
+    )
+    return parser
+
+
+def main() -> int:
+    """CLI program entry point."""
+    args = build_parser().parse_args()
+    configure_logging(args.verbose)
+
+    backend = FakeNVMLBackend() if args.simulate else RealNVMLBackend(fail_on_unsupported=args.fail_on_unsupported)
+    collector = GPUCollector(
+        backend=backend,
+        config=CollectorConfig(
+            interval_seconds=args.interval,
+            window_short_seconds=args.window_short,
+            window_long_seconds=args.window_long,
+        ),
+    )
+
+    jsonl_writer = JsonlWriter(args.out_dir) if args.jsonl else None
+    csv_writer = CsvSummaryWriter(args.out_dir) if args.csv else None
+    console_reporter = ConsoleReporter()
+    exporter = PrometheusExporter(args.prometheus_port) if args.prometheus_port else None
+
+    try:
+        collector.initialize()
+    except Exception as exc:
+        LOGGER.error("%s", exc)
+        return 2
+
+    if exporter is not None:
+        exporter.start()
+
+    last_console_ts = 0.0
+    last_csv_ts = 0.0
+
+    try:
+        while True:
+            loop_start = time.monotonic()
+            reports = collector.poll_once()
+            if jsonl_writer is not None:
+                jsonl_writer.write_reports(reports)
+            if exporter is not None:
+                exporter.update(reports)
+
+            now = time.monotonic()
+            if csv_writer is not None and (args.once or now - last_csv_ts >= 60.0):
+                csv_writer.write_reports(reports)
+                last_csv_ts = now
+
+            if args.once or now - last_console_ts >= args.console_refresh:
+                print(console_reporter.render(reports), flush=True)
+                last_console_ts = now
+
+            if args.once:
+                return 0
+
+            sleep_for = max(0.0, args.interval - (time.monotonic() - loop_start))
+            time.sleep(sleep_for)
+    except KeyboardInterrupt:
+        LOGGER.info("Interrupted; shutting down.")
+        return 0
+    finally:
+        collector.shutdown()
