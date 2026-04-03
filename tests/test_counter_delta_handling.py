@@ -40,3 +40,28 @@ def test_missing_counter_yields_null_low_util_pct() -> None:
     summary = window.summarize(window_seconds=10)
 
     assert summary.low_util_pct_window is None
+
+
+def test_negative_counter_delta_contributes_zero() -> None:
+    assert RollingWindow._safe_counter_delta(9_000_000_000, 4_000_000_000, 10_000_000_000) == 0
+
+
+def test_zero_or_negative_elapsed_counter_delta_contributes_zero() -> None:
+    assert RollingWindow._safe_counter_delta(1_000_000_000, 2_000_000_000, 0) == 0
+    assert RollingWindow._safe_counter_delta(1_000_000_000, 2_000_000_000, -1) == 0
+
+
+def test_counter_delta_is_clamped_to_elapsed_time() -> None:
+    assert RollingWindow._safe_counter_delta(0, 50_000_000_000, 10_000_000_000) == 10_000_000_000
+
+
+def test_non_monotonic_timestamp_resets_window_baseline() -> None:
+    window = RollingWindow(max_window_seconds=300)
+    window.append(sample(10_000_000_000, 1_000_000_000))
+    window.append(sample(20_000_000_000, 9_000_000_000))
+    window.append(sample(15_000_000_000, 2_000_000_000))
+    window.append(sample(25_000_000_000, 5_000_000_000))
+
+    summary = window.summarize(window_seconds=300)
+
+    assert summary.low_util_pct_window == 30.0

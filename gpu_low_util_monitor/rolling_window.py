@@ -37,6 +37,9 @@ class RollingWindow:
     def append(self, sample: DeviceSample) -> None:
         """Append a new sample and derive interval metrics from the prior sample."""
         previous = self._samples[-1] if self._samples else None
+        if previous is not None and sample.monotonic_ns <= previous.monotonic_ns:
+            self._reset_with_sample(sample)
+            return
         if previous is not None and sample.monotonic_ns > previous.monotonic_ns:
             elapsed_ns = sample.monotonic_ns - previous.monotonic_ns
             self._intervals.append(
@@ -63,6 +66,18 @@ class RollingWindow:
         self._samples.append(sample)
         self._evict(sample.monotonic_ns)
 
+    def _reset_with_sample(self, sample: DeviceSample) -> None:
+        """Reset retained state when monotonic time discontinuity is observed.
+
+        A non-increasing monotonic timestamp means previously accumulated
+        intervals are no longer trustworthy for delta math. Rather than carrying
+        a stale baseline forward and risking bogus percentages on the next poll,
+        the window is restarted from the current sample.
+        """
+        self._samples.clear()
+        self._intervals.clear()
+        self._samples.append(sample)
+
     @staticmethod
     def _safe_counter_delta(
         previous_counter_ns: int | None,
@@ -72,6 +87,8 @@ class RollingWindow:
         """Return a defensively clamped counter delta for one interval."""
         if previous_counter_ns is None or current_counter_ns is None:
             return None
+        if elapsed_ns <= 0:
+            return 0
         if current_counter_ns < previous_counter_ns:
             return 0
         delta = current_counter_ns - previous_counter_ns

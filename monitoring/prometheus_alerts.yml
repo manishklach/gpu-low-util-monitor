@@ -1,0 +1,52 @@
+groups:
+  - name: gpu-low-util-monitor
+    rules:
+      # The repo's canonical Prometheus metrics use window_role/window_seconds
+      # labels so the defaults (short=60s, long=1200s) are not treated as fixed
+      # product semantics. These starter alerts key off the configured long
+      # window and should be tuned for each environment.
+
+      - alert: GPU_LowUtil_High_LongWindow
+        expr: gpu_low_util_pct{window_role="long"} > 70
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GPU low-utilization is elevated over the configured long window"
+          description: "This rolling-window pattern suggests the GPU is spending a large share of recent time in documented low-utilization policy. Investigate workload feeding, scheduling, or host-side bottlenecks."
+
+      - alert: GPU_Underfed_Likely
+        expr: (gpu_low_util_pct{window_role="long"} > 70) and on (gpu_index, uuid, name, window_role, window_seconds) (gpu_avg_gpu_util{window_role="long"} < 20)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GPU looks likely underfed over the configured long window"
+          description: "High long-window low-utilization plus low long-window average GPU utilization suggests likely underfeeding, workload starvation, or bursty scheduling rather than a healthy steady-state workload."
+
+      - alert: GPU_Dim_And_Idle_Bursty
+        expr: (gpu_idle_entries{window_role="long"} > 10) and on (gpu_index, uuid, name, window_role, window_seconds) (gpu_idle_reason_pct{window_role="long"} > 20)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GPU shows repeated Idle episodes over the configured long window"
+          description: "Elevated Idle entry count together with sampled Idle presence suggests bursty or intermittent dispatch. Investigate scheduling cadence, host stalls, or feeder-side gaps."
+
+      - alert: GPU_Power_Low_With_High_LowUtil
+        expr: (gpu_low_util_pct{window_role="long"} > 70) and on (gpu_index, uuid, name, window_role, window_seconds) (gpu_power_pct_of_cap{window_role="long"} < 35)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GPU looks dim while long-window low-utilization stays elevated"
+          description: "Low power as a percentage of cap together with high long-window low-utilization suggests a dark or dim GPU. Investigate likely underfeeding, packing, or workload starvation before assuming root cause."
+
+      - alert: GPU_ThermalOrPerfPolicyContext
+        expr: (gpu_thermal_limit_pct{window_role="long"} > 10) or (gpu_power_limit_pct{window_role="long"} > 10)
+        for: 15m
+        labels:
+          severity: info
+        annotations:
+          summary: "Thermal or performance-policy context is elevated for this GPU"
+          description: "This corroborating signal suggests cooling, thermal throttling, or performance-policy pressure may be contributing to the observed behavior. Treat it as context for investigation, not a guaranteed root-cause diagnosis."

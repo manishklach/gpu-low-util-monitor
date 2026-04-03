@@ -10,7 +10,20 @@
 
 - Dashboard: [grafana/dashboard.json](grafana/dashboard.json)
 - Deployment: [Dockerfile](Dockerfile), [deploy/configmap.yaml](deploy/configmap.yaml), [deploy/daemonset.yaml](deploy/daemonset.yaml)
+- Alerting: [monitoring/prometheus_alerts.yml](monitoring/prometheus_alerts.yml)
 - Examples: [examples/sample_output.jsonl](examples/sample_output.jsonl), [examples/sample_summary.csv](examples/sample_summary.csv), [examples/sample_prometheus.txt](examples/sample_prometheus.txt)
+
+## Deployment Model
+
+`gpu-low-util-monitor` is primarily a per-node leaf collector/exporter. It runs close to the GPUs on a host, collects node-local rolling-window observability signals, and emits JSONL, CSV, console, heatmap, and Prometheus outputs for that node.
+
+Fleet-wide aggregation is expected to happen in Prometheus, Grafana, or similar observability systems rather than inside this repository. In practice, that usually means:
+
+- local host mode for validation and debugging
+- container mode for single-node or service-style deployment
+- DaemonSet mode for node-local collection across a Kubernetes fleet
+- Prometheus scraping for fleet-wide time series and alerting
+- Grafana for dashboards, correlations, and operator workflows
 
 ## Why This Exists
 
@@ -116,7 +129,9 @@ Implementation notes:
 - Derived from deltas of the cumulative `NVML_FI_DEV_PERF_POLICY_LOW_UTILIZATION` counter
 - Uses monotonic time for elapsed-time math
 - Clamped to `[0, 100]`
-- Counter resets or negative deltas are treated defensively and never contribute misleading negative time
+- Counter resets, negative deltas, and non-increasing elapsed time are treated defensively and never contribute misleading negative time
+- If monotonic time moves backward or stops increasing, the retained rolling baseline is reset before the next interval is computed
+- Counter jumps larger than elapsed time are clamped to elapsed time so anomalous samples cannot produce impossible percentages
 
 Interpretation:
 
@@ -385,6 +400,12 @@ Power-specific options:
 
 ## Deployment
 
+Quick deployment paths:
+
+- Local host mode: run the collector directly on one machine to validate drivers, NVML visibility, and output semantics
+- Container mode: run the packaged image on one node when the NVIDIA runtime already exposes GPUs and NVML
+- DaemonSet mode: run one collector pod per GPU node and let Prometheus/Grafana handle fleet aggregation
+
 ### Docker
 
 A production-friendly image definition is included in [Dockerfile](Dockerfile). It installs the package with the `nvml` and `prometheus` extras and starts the monitor by default with sensible runtime arguments.
@@ -422,6 +443,8 @@ kubectl apply -f deploy/configmap.yaml
 kubectl apply -f deploy/daemonset.yaml
 ```
 
+Prometheus should scrape each node-local exporter endpoint, and Grafana can then query the fleet-wide metrics across nodes.
+
 ## Dashboarding
 
 A Grafana starter dashboard is included at [grafana/dashboard.json](grafana/dashboard.json). It focuses on the operator questions this repo is designed to answer:
@@ -433,7 +456,24 @@ A Grafana starter dashboard is included at [grafana/dashboard.json](grafana/dash
 - long-window power as a percentage of cap
 - long-window thermal-limit and power-limit corroboration
 
-If you want a placeholder visual for screenshots or documentation updates later, see [examples/screenshots/README.md](examples/screenshots/README.md).
+For concrete output references, pair the dashboard with:
+
+- [examples/sample_prometheus.txt](examples/sample_prometheus.txt)
+- [examples/sample_summary.csv](examples/sample_summary.csv)
+- [examples/sample_output.jsonl](examples/sample_output.jsonl)
+- [examples/screenshots/README.md](examples/screenshots/README.md) for the placeholder structure reserved for future visual captures
+
+## Alerting
+
+Starter Prometheus alert rules are included at [monitoring/prometheus_alerts.yml](monitoring/prometheus_alerts.yml). They are intentionally heuristic, not authoritative:
+
+- sustained high long-window low-utilization
+- likely underfeeding based on high low-utilization plus low average utilization
+- bursty Idle behavior over the long window
+- dim power together with high low-utilization
+- informational thermal/power-policy corroboration context
+
+These rules are meant as starting points for SRE / ML infra teams. Tune thresholds, durations, and routing per environment rather than treating the defaults as universal truth.
 
 ## How It Works
 
