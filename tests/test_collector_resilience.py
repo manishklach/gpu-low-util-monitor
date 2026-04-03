@@ -29,6 +29,8 @@ class FlakyBackend:
             power_cap_w=700.0,
             total_energy_joules=600.0,
             idle_reason_active=False,
+            thermal_limit_active=False,
+            power_limit_active=False,
             low_util_counter_ns=10_000_000,
             capabilities=DeviceCapabilities(),
         )

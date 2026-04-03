@@ -23,6 +23,8 @@ def _sample(
         power_cap_w=power_cap_w,
         total_energy_joules=total_energy_joules,
         idle_reason_active=False,
+        thermal_limit_active=False,
+        power_limit_active=False,
         low_util_counter_ns=0,
         capabilities=DeviceCapabilities(),
     )
@@ -85,6 +87,8 @@ def test_heatmap_writer_format(tmp_path: Path) -> None:
             low_util_pct_window=40.0,
             idle_reason_pct_window=10.0,
             idle_entries_window=1,
+            thermal_limit_pct_window=0.0,
+            power_limit_pct_window=5.0,
             avg_gpu_util_window=60.0,
             avg_sm_clock_mhz_window=1200.0,
             avg_mem_clock_mhz_window=1500.0,
@@ -99,6 +103,8 @@ def test_heatmap_writer_format(tmp_path: Path) -> None:
             low_util_pct_window=55.0,
             idle_reason_pct_window=15.0,
             idle_entries_window=3,
+            thermal_limit_pct_window=20.0,
+            power_limit_pct_window=0.0,
             avg_gpu_util_window=50.0,
             avg_sm_clock_mhz_window=1100.0,
             avg_mem_clock_mhz_window=1500.0,
@@ -117,6 +123,7 @@ def test_heatmap_writer_format(tmp_path: Path) -> None:
     assert '"window_seconds":1200' in text
     assert '"avg_power_w_window":205.0' in text
     assert '"low_util_pct_window":55.0' in text
+    assert '"thermal_limit_pct_window":20.0' in text
     assert '"current_power_w":220.0' in text
     assert '"avg_power_w_long":205.0' in text
     assert '"power_activity_pct_long":22.5' in text

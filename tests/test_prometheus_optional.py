@@ -12,6 +12,8 @@ def test_prometheus_exporter_is_optional() -> None:
         assert "gpu_low_util_pct" in exporter._gauges
         assert "gpu_idle_reason_pct" in exporter._gauges
         assert "gpu_power_activity_pct" in exporter._gauges
+        assert "gpu_thermal_limit_pct" in exporter._gauges
+        assert "gpu_power_limit_pct" in exporter._gauges
         return
 
     with pytest.raises(RuntimeError):

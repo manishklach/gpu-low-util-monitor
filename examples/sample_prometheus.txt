@@ -1,0 +1,28 @@
+# HELP gpu_current_power_w Current GPU power draw in watts.
+# TYPE gpu_current_power_w gauge
+gpu_current_power_w{gpu_index="0",uuid="GPU-sim-0000",name="NVIDIA H100 80GB HBM3"} 212
+gpu_current_power_w{gpu_index="1",uuid="GPU-sim-0001",name="NVIDIA H200 141GB HBM3e"} 662
+# HELP gpu_low_util_pct Rolling low-utilization percentage.
+# TYPE gpu_low_util_pct gauge
+gpu_low_util_pct{gpu_index="0",uuid="GPU-sim-0000",name="NVIDIA H100 80GB HBM3",window_role="long",window_seconds="1200"} 67.1
+gpu_low_util_pct{gpu_index="1",uuid="GPU-sim-0001",name="NVIDIA H200 141GB HBM3e",window_role="long",window_seconds="1200"} 2
+# HELP gpu_idle_reason_pct Rolling sampled Idle percentage.
+# TYPE gpu_idle_reason_pct gauge
+gpu_idle_reason_pct{gpu_index="0",uuid="GPU-sim-0000",name="NVIDIA H100 80GB HBM3",window_role="long",window_seconds="1200"} 33.2
+gpu_idle_reason_pct{gpu_index="1",uuid="GPU-sim-0001",name="NVIDIA H200 141GB HBM3e",window_role="long",window_seconds="1200"} 0
+# HELP gpu_avg_power_w Rolling average power in watts.
+# TYPE gpu_avg_power_w gauge
+gpu_avg_power_w{gpu_index="0",uuid="GPU-sim-0000",name="NVIDIA H100 80GB HBM3",window_role="long",window_seconds="1200"} 216.1
+gpu_avg_power_w{gpu_index="1",uuid="GPU-sim-0001",name="NVIDIA H200 141GB HBM3e",window_role="long",window_seconds="1200"} 662
+# HELP gpu_power_pct_of_cap Rolling average power as a percentage of cap.
+# TYPE gpu_power_pct_of_cap gauge
+gpu_power_pct_of_cap{gpu_index="0",uuid="GPU-sim-0000",name="NVIDIA H100 80GB HBM3",window_role="long",window_seconds="1200"} 30.871
+gpu_power_pct_of_cap{gpu_index="1",uuid="GPU-sim-0001",name="NVIDIA H200 141GB HBM3e",window_role="long",window_seconds="1200"} 94.571
+# HELP gpu_thermal_limit_pct Rolling sampled percentage with a thermal-limit reason active.
+# TYPE gpu_thermal_limit_pct gauge
+gpu_thermal_limit_pct{gpu_index="0",uuid="GPU-sim-0000",name="NVIDIA H100 80GB HBM3",window_role="long",window_seconds="1200"} 0
+gpu_thermal_limit_pct{gpu_index="1",uuid="GPU-sim-0001",name="NVIDIA H200 141GB HBM3e",window_role="long",window_seconds="1200"} 0
+# HELP gpu_power_limit_pct Rolling sampled percentage with a power-limit reason active.
+# TYPE gpu_power_limit_pct gauge
+gpu_power_limit_pct{gpu_index="0",uuid="GPU-sim-0000",name="NVIDIA H100 80GB HBM3",window_role="long",window_seconds="1200"} 0
+gpu_power_limit_pct{gpu_index="1",uuid="GPU-sim-0001",name="NVIDIA H200 141GB HBM3e",window_role="long",window_seconds="1200"} 100

@@ -14,6 +14,8 @@ def _sample(ts_ns: int, counter_ns: int, idle: bool) -> DeviceSample:
         power_cap_w=700.0,
         total_energy_joules=float(ts_ns / 1_000_000_000) * 200.0,
         idle_reason_active=idle,
+        thermal_limit_active=False,
+        power_limit_active=False,
         low_util_counter_ns=counter_ns,
         capabilities=DeviceCapabilities(),
     )

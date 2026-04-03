@@ -24,8 +24,18 @@ class UnsupportedIdleBackend:
             power_cap_w=None,
             total_energy_joules=None,
             idle_reason_active=None,
+            thermal_limit_active=None,
+            power_limit_active=None,
             low_util_counter_ns=None,
-            capabilities=DeviceCapabilities(low_util_counter=False, idle_reason=False, mem_clock=False, power_cap=False, total_energy=False),
+            capabilities=DeviceCapabilities(
+                low_util_counter=False,
+                idle_reason=False,
+                thermal_limit=False,
+                power_limit=False,
+                mem_clock=False,
+                power_cap=False,
+                total_energy=False,
+            ),
         )
 
 
@@ -45,3 +55,5 @@ def test_unsupported_fields_propagate_to_summaries() -> None:
     assert report.long_summary.low_util_pct_window is None
     assert report.long_summary.idle_reason_pct_window is None
     assert report.long_summary.idle_entries_window is None
+    assert report.long_summary.thermal_limit_pct_window is None
+    assert report.long_summary.power_limit_pct_window is None

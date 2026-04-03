@@ -36,9 +36,12 @@ def test_multi_gpu_collection_and_formatting(tmp_path: Path) -> None:
     assert '"summary_long"' in jsonl_text
     assert '"summary_60s"' in jsonl_text
     assert '"availability"' in jsonl_text
+    assert '"thermal_limit_active"' in jsonl_text
+    assert '"power_limit_pct_window"' in jsonl_text
     assert "window_role" in csv_text
     assert "window_seconds" in csv_text
     assert "low_util_pct_window" in csv_text
+    assert "thermal_limit_pct_window" in csv_text
     assert ",short,60," in csv_text
     assert ",long,1200," in csv_text
 
@@ -58,3 +61,4 @@ def test_console_reporter_labels_configured_windows() -> None:
 
     assert "low_util_short(75s)" in rendered
     assert "low_util_long(15m)" in rendered
+    assert "thermal_pct_long(15m)" in rendered

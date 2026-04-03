@@ -21,6 +21,8 @@ class DeviceCapabilities:
 
     low_util_counter: bool = True
     idle_reason: bool = True
+    thermal_limit: bool = True
+    power_limit: bool = True
     mem_clock: bool = True
     power_cap: bool = True
     total_energy: bool = True
@@ -44,6 +46,8 @@ class DeviceSample:
     power_cap_w: float | None
     total_energy_joules: float | None
     idle_reason_active: bool | None
+    thermal_limit_active: bool | None
+    power_limit_active: bool | None
     low_util_counter_ns: int | None
     capabilities: DeviceCapabilities
 
@@ -57,6 +61,8 @@ class WindowSummary:
     low_util_pct_window: float | None
     idle_reason_pct_window: float | None
     idle_entries_window: int | None
+    thermal_limit_pct_window: float | None
+    power_limit_pct_window: float | None
     avg_gpu_util_window: float | None
     avg_sm_clock_mhz_window: float | None
     avg_mem_clock_mhz_window: float | None
@@ -71,6 +77,8 @@ class WindowSummary:
             "low_util_pct_window": self.low_util_pct_window,
             "idle_reason_pct_window": self.idle_reason_pct_window,
             "idle_entries_window": self.idle_entries_window,
+            "thermal_limit_pct_window": self.thermal_limit_pct_window,
+            "power_limit_pct_window": self.power_limit_pct_window,
             "avg_gpu_util_window": self.avg_gpu_util_window,
             "avg_sm_clock_mhz_window": self.avg_sm_clock_mhz_window,
             "avg_mem_clock_mhz_window": self.avg_mem_clock_mhz_window,
@@ -114,6 +122,8 @@ class SampleReport:
                 "power_cap_w": self.sample.power_cap_w,
                 "total_energy_joules": self.sample.total_energy_joules,
                 "idle_reason_active": self.sample.idle_reason_active,
+                "thermal_limit_active": self.sample.thermal_limit_active,
+                "power_limit_active": self.sample.power_limit_active,
                 "low_util_counter_ns": self.sample.low_util_counter_ns,
             },
             "summary_short": self.short_summary.to_public_dict(),

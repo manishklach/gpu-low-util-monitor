@@ -47,6 +47,8 @@ Complementary power/activity metrics:
 - long-window power as a percentage of cap when power cap is available
 - optional normalized power activity percentage when calibration is available
 - short-window and long-window energy accumulation when cumulative energy is available
+- current sampled thermal-limit and power-limit context when documented clock-event signals are available
+- short-window and long-window sampled thermal-limit and power-limit percentages when supported
 
 The design intentionally treats low-utilization over time as the primary KPI, not instantaneous utilization. The default short and long windows are 60 seconds and 1200 seconds, but both are operator-configurable at runtime and should be interpreted as defaults rather than fixed product semantics.
 
@@ -144,6 +146,17 @@ Important cautions:
 - it is only emitted when valid calibration values are available
 - if calibration is missing or invalid, the value is `null`
 
+## Thermal Corroboration
+
+Low-util behavior is not always a workload-feeding problem. A GPU can also look constrained because thermal-limit or power-limit reasons are active.
+
+This repository exposes those signals as corroborating context, not singular truth:
+
+- `thermal_limit_active` and `power_limit_active`
+- `thermal_limit_pct_window` and `power_limit_pct_window`
+
+These metrics are derived from documented current clocks event or throttle reason bitmasks when supported by the runtime path. They help operators distinguish a likely underfed or bursty workload from a GPU that is being held back by thermal or power-policy conditions.
+
 ## Metric Semantics
 
 ### Supporting Metrics
@@ -167,6 +180,8 @@ This repository explicitly distinguishes:
 - software-derived Idle entry counts
 - raw power draw
 - optional normalized power activity based on operator-supplied calibration
+- current sampled thermal-limit and power-limit states
+- sampled thermal-limit and power-limit percentages over rolling windows
 
 These are related but not interchangeable signals.
 
@@ -189,6 +204,7 @@ Common interpretations:
 - Low power + high long-window Idle entry count: likely bursty or intermittent dispatch
 - High power + low long-window low-utilization percentage: likely healthy busy GPU
 - High power + high long-window low-utilization percentage: investigate for calibration mismatch, measurement interpretation issues, or more complex workload behavior
+- High long-window low-utilization with elevated thermal-limit or power-limit percentage: investigate whether the observed behavior reflects cooling, thermal throttling, or performance-policy pressure rather than purely workload starvation
 
 ## Limitations
 
@@ -202,6 +218,7 @@ Common interpretations:
 - Cumulative energy support is platform and runtime dependent
 - This tool measures observables, not root-cause certainty
 - The normalization of the low-utilization counter and cumulative energy counter should still be validated on the target driver branch during hardware bring-up
+- Thermal-limit and power-limit corroboration depend on documented clock-event/throttle reason support on the target driver/runtime path
 
 ## Installation
 
@@ -304,6 +321,56 @@ Power-specific options:
 - `--heatmap-group-by host|gpu`
 - `--no-power-normalization`
 
+## Deployment
+
+### Docker
+
+A production-friendly image definition is included in [Dockerfile](Dockerfile). It installs the package with the `nvml` and `prometheus` extras and starts the monitor by default with sensible runtime arguments.
+
+Example build and run:
+
+```bash
+docker build -t gpu-low-util-monitor:local .
+docker run --rm \
+  --gpus all \
+  -v $(pwd)/out:/var/log/gpu-low-util-monitor \
+  gpu-low-util-monitor:local
+```
+
+Assumptions:
+
+- the host has NVIDIA drivers installed
+- the container runtime exposes GPUs to the container
+- NVML is visible inside the container
+
+### Kubernetes / DaemonSet
+
+Sample manifests live in [deploy/configmap.yaml](deploy/configmap.yaml) and [deploy/daemonset.yaml](deploy/daemonset.yaml).
+
+The DaemonSet is intentionally minimal and assumes:
+
+- GPU nodes are already configured with NVIDIA runtime/device visibility
+- your cluster labels GPU nodes in a way similar to `nvidia.com/gpu.present=true`
+- exposing all host GPUs to the monitor pod is acceptable for your environment
+
+Apply the sample manifests with:
+
+```bash
+kubectl apply -f deploy/configmap.yaml
+kubectl apply -f deploy/daemonset.yaml
+```
+
+## Dashboarding
+
+A Grafana starter dashboard is included at [grafana/dashboard.json](grafana/dashboard.json). It focuses on the operator questions this repo is designed to answer:
+
+- long-window and short-window low-utilization
+- long-window sampled Idle percentage and Idle entries
+- long-window average GPU utilization
+- current and long-window average power
+- long-window power as a percentage of cap
+- long-window thermal-limit and power-limit corroboration
+
 ## How It Works
 
 At each poll, the collector:
@@ -374,6 +441,12 @@ sudo systemctl status gpu-low-util-monitor.service
 
 ## Example Outputs
 
+## Illustrative Case Study
+
+Illustrative scenario, not a claimed production result:
+
+Standard monitoring showed modest GPU utilization and no obvious outage. `gpu-low-util-monitor` then showed that the GPU spent a large share of the configured long window in documented low-utilization policy, re-entered Idle repeatedly, and looked relatively dim in rolling power. That combination points more toward host-side feeding gaps or bursty dispatch than a healthy steady-state workload. If thermal-limit or power-limit sampled percentages were also elevated, the operator would have stronger evidence to investigate cooling or policy pressure instead of workload starvation alone.
+
 ### Console
 
 ```text
@@ -408,6 +481,15 @@ If `--emit-heatmap-json` is enabled, the tool writes machine-friendly snapshots 
 - long-window low-utilization percentage
 - long-window sampled Idle percentage
 - long-window Idle entry count
+- long-window sampled thermal-limit and power-limit percentages
+
+### Prometheus Exposition
+
+See [examples/sample_prometheus.txt](examples/sample_prometheus.txt).
+
+### Screenshots
+
+See [examples/screenshots/README.md](examples/screenshots/README.md) for the placeholder structure reserved for future visual captures.
 
 ## References
 

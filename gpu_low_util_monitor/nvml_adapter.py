@@ -93,6 +93,8 @@ class RealNVMLBackend:
         power_cap_w = None
         total_energy_joules = None
         idle_reason_active = None
+        thermal_limit_active = None
+        power_limit_active = None
         low_util_counter_ns = None
 
         try:
@@ -151,6 +153,8 @@ class RealNVMLBackend:
             capabilities = DeviceCapabilities(
                 low_util_counter=capabilities.low_util_counter,
                 idle_reason=False,
+                thermal_limit=capabilities.thermal_limit,
+                power_limit=capabilities.power_limit,
                 mem_clock=capabilities.mem_clock,
                 power_cap=capabilities.power_cap,
                 total_energy=capabilities.total_energy,
@@ -159,11 +163,59 @@ class RealNVMLBackend:
             idle_reason_active = None
 
         try:
+            thermal_limit_active = self._read_reason_mask_state(
+                handle,
+                (
+                    "nvmlClocksEventReasonSwThermalSlowdown",
+                    "nvmlClocksEventReasonHwThermalSlowdown",
+                    "nvmlClocksThrottleReasonSwThermalSlowdown",
+                    "nvmlClocksThrottleReasonHwThermalSlowdown",
+                ),
+            )
+        except Exception as exc:
+            capabilities = DeviceCapabilities(
+                low_util_counter=capabilities.low_util_counter,
+                idle_reason=capabilities.idle_reason,
+                thermal_limit=False,
+                power_limit=capabilities.power_limit,
+                mem_clock=capabilities.mem_clock,
+                power_cap=capabilities.power_cap,
+                total_energy=capabilities.total_energy,
+            )
+            self._warn_unsupported(identity.index, "thermal_limit", exc)
+            thermal_limit_active = None
+
+        try:
+            power_limit_active = self._read_reason_mask_state(
+                handle,
+                (
+                    "nvmlClocksEventReasonSwPowerCap",
+                    "nvmlClocksEventReasonHwPowerBrakeSlowdown",
+                    "nvmlClocksThrottleReasonSwPowerCap",
+                    "nvmlClocksThrottleReasonHwPowerBrakeSlowdown",
+                ),
+            )
+        except Exception as exc:
+            capabilities = DeviceCapabilities(
+                low_util_counter=capabilities.low_util_counter,
+                idle_reason=capabilities.idle_reason,
+                thermal_limit=capabilities.thermal_limit,
+                power_limit=False,
+                mem_clock=capabilities.mem_clock,
+                power_cap=capabilities.power_cap,
+                total_energy=capabilities.total_energy,
+            )
+            self._warn_unsupported(identity.index, "power_limit", exc)
+            power_limit_active = None
+
+        try:
             low_util_counter_ns = self._read_low_util_counter_ns(handle)
         except Exception as exc:
             capabilities = DeviceCapabilities(
                 low_util_counter=False,
                 idle_reason=capabilities.idle_reason,
+                thermal_limit=capabilities.thermal_limit,
+                power_limit=capabilities.power_limit,
                 mem_clock=capabilities.mem_clock,
                 power_cap=capabilities.power_cap,
                 total_energy=capabilities.total_energy,
@@ -182,6 +234,8 @@ class RealNVMLBackend:
             power_cap_w=power_cap_w,
             total_energy_joules=total_energy_joules,
             idle_reason_active=idle_reason_active,
+            thermal_limit_active=thermal_limit_active,
+            power_limit_active=power_limit_active,
             low_util_counter_ns=low_util_counter_ns,
             capabilities=capabilities,
         )
@@ -213,6 +267,12 @@ class RealNVMLBackend:
         """
         pynvml = self._pynvml
         assert pynvml is not None
+        return self._read_reason_mask_state(handle, ("nvmlClocksEventReasonIdle", "nvmlClocksThrottleReasonGpuIdle"))
+
+    def _read_reason_mask_state(self, handle: object, constant_names: tuple[str, ...]) -> bool:
+        """Read whether any documented clock-event/throttle reason bit is active."""
+        pynvml = self._pynvml
+        assert pynvml is not None
         if hasattr(pynvml, "nvmlDeviceGetCurrentClocksEventReasons"):
             mask = int(pynvml.nvmlDeviceGetCurrentClocksEventReasons(handle))
         elif hasattr(pynvml, "nvmlDeviceGetCurrentClocksThrottleReasons"):
@@ -220,14 +280,14 @@ class RealNVMLBackend:
         else:
             raise UnsupportedFieldError("Current clocks event reasons API is unavailable")
 
-        idle_mask = None
-        for constant_name in ("nvmlClocksEventReasonIdle", "nvmlClocksThrottleReasonGpuIdle"):
-            if hasattr(pynvml, constant_name):
-                idle_mask = int(getattr(pynvml, constant_name))
-                break
-        if idle_mask is None:
-            raise UnsupportedFieldError("Idle reason bit constant is unavailable")
-        return bool(mask & idle_mask)
+        available_masks = [
+            int(getattr(pynvml, constant_name))
+            for constant_name in constant_names
+            if hasattr(pynvml, constant_name)
+        ]
+        if not available_masks:
+            raise UnsupportedFieldError(f"Reason bit constant unavailable for any of: {constant_names}")
+        return any(mask & candidate for candidate in available_masks)
 
     def _read_power_cap_w(self, handle: object) -> float:
         """Read the enforced or configured power cap in watts when available."""
@@ -276,12 +336,13 @@ class FakeNVMLBackend:
 
     def __init__(self, scenarios: list[str] | None = None) -> None:
         scenario_names = scenarios or [
-            "fully-idle",
-            "steady-busy",
-            "bursty",
-            "underfed",
-            "power-limited-busy",
-        ]
+                "fully-idle",
+                "steady-busy",
+                "bursty",
+                "underfed",
+                "power-limited-busy",
+                "thermal-limited-busy",
+            ]
         default_names = [
             "NVIDIA H100 80GB HBM3",
             "NVIDIA H200 141GB HBM3e",
@@ -339,6 +400,8 @@ class FakeNVMLBackend:
             mem_clock=metrics["mem_clock_mhz"] is not None,
             power_cap=metrics["power_cap_w"] is not None,
             total_energy=True,
+            thermal_limit=metrics["thermal_limit_active"] is not None,
+            power_limit=metrics["power_limit_active"] is not None,
         )
 
         return DeviceSample(
@@ -352,6 +415,8 @@ class FakeNVMLBackend:
             power_cap_w=float(metrics["power_cap_w"]) if metrics["power_cap_w"] is not None else None,
             total_energy_joules=total_energy_joules,
             idle_reason_active=bool(metrics["idle_reason_active"]) if metrics["idle_reason_active"] is not None else None,
+            thermal_limit_active=bool(metrics["thermal_limit_active"]) if metrics["thermal_limit_active"] is not None else None,
+            power_limit_active=bool(metrics["power_limit_active"]) if metrics["power_limit_active"] is not None else None,
             low_util_counter_ns=low_util_counter_ns,
             capabilities=capabilities,
         )
@@ -367,6 +432,8 @@ class FakeNVMLBackend:
                 "power_w": 78.0,
                 "power_cap_w": 700.0,
                 "idle_reason_active": True,
+                "thermal_limit_active": False,
+                "power_limit_active": False,
                 "low_util_fraction": 1.0,
             }
         if kind == "steady-busy":
@@ -377,6 +444,8 @@ class FakeNVMLBackend:
                 "power_w": 662.0,
                 "power_cap_w": 700.0,
                 "idle_reason_active": False,
+                "thermal_limit_active": False,
+                "power_limit_active": False,
                 "low_util_fraction": 0.02,
             }
         if kind == "bursty":
@@ -387,6 +456,8 @@ class FakeNVMLBackend:
                 "power_w": 518.0 if bursty_active else 92.0,
                 "power_cap_w": 700.0,
                 "idle_reason_active": not bursty_active,
+                "thermal_limit_active": False,
+                "power_limit_active": False,
                 "low_util_fraction": 0.12 if bursty_active else 1.0,
             }
         if kind == "underfed":
@@ -397,6 +468,8 @@ class FakeNVMLBackend:
                 "power_w": 205.0 + (phase % 5) * 6.0,
                 "power_cap_w": 700.0,
                 "idle_reason_active": phase % 7 in (0, 1),
+                "thermal_limit_active": False,
+                "power_limit_active": False,
                 "low_util_fraction": 0.72,
             }
         if kind == "power-limited-busy":
@@ -407,6 +480,20 @@ class FakeNVMLBackend:
                 "power_w": 698.0,
                 "power_cap_w": 700.0,
                 "idle_reason_active": False,
+                "thermal_limit_active": False,
+                "power_limit_active": True,
                 "low_util_fraction": 0.05,
+            }
+        if kind == "thermal-limited-busy":
+            return {
+                "gpu_util_pct": 79.0,
+                "sm_clock_mhz": 1185.0,
+                "mem_clock_mhz": 1593.0,
+                "power_w": 610.0,
+                "power_cap_w": 700.0,
+                "idle_reason_active": False,
+                "thermal_limit_active": True,
+                "power_limit_active": False,
+                "low_util_fraction": 0.08,
             }
         raise ValueError(f"Unknown simulation scenario: {kind}")

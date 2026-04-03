@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpu-low-util-monitor-config
+data:
+  MONITOR_ARGS: >-
+    --interval 1
+    --window-short 60
+    --window-long 1200
+    --out-dir /var/log/gpu-low-util-monitor
+    --jsonl
+    --csv
+    --console-refresh 30
+    --prometheus-port 9108

@@ -25,12 +25,13 @@ LOGGER = logging.getLogger(__name__)
 def build_parser() -> argparse.ArgumentParser:
     """Create the CLI argument parser."""
     parser = argparse.ArgumentParser(
-        description="Monitor low-utilization time, idle-state behavior, and power-based activity on NVIDIA datacenter GPUs.",
+        description="Monitor low-utilization time, idle-state behavior, power-based activity, and thermal/policy corroboration on NVIDIA datacenter GPUs.",
         epilog=(
             "This tool measures low-utilization, idle-state behavior, and power-based activity "
             "over time using documented NVIDIA signals. It provides a practical proxy for GPU "
             "underuse, workload starvation, underfeeding, or dark/dim GPUs, but it should not "
-            "claim omniscient knowledge of economic waste or all causes of low activity. The "
+            "claim omniscient knowledge of economic waste or all causes of low activity. Thermal "
+            "and power-limit signals are exposed as corroborating context, not singular truth. The "
             "short and long windows are operator-configurable; 60 seconds and 1200 seconds are "
             "defaults, not fixed product semantics."
         ),

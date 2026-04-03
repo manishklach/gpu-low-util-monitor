@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: gpu-low-util-monitor
+  labels:
+    app: gpu-low-util-monitor
+spec:
+  selector:
+    matchLabels:
+      app: gpu-low-util-monitor
+  template:
+    metadata:
+      labels:
+        app: gpu-low-util-monitor
+    spec:
+      # Assumes the cluster already has NVIDIA container runtime/device visibility configured.
+      # Many clusters expose GPU nodes with a label like nvidia.com/gpu.present=true; adjust as needed.
+      nodeSelector:
+        nvidia.com/gpu.present: "true"
+      runtimeClassName: nvidia
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: monitor
+          image: ghcr.io/manishklach/gpu-low-util-monitor:latest
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - exec gpu-low-util-monitor $MONITOR_ARGS
+          envFrom:
+            - configMapRef:
+                name: gpu-low-util-monitor-config
+          env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: utility
+          ports:
+            - name: metrics
+              containerPort: 9108
+          volumeMounts:
+            - name: logs
+              mountPath: /var/log/gpu-low-util-monitor
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+      volumes:
+        - name: logs
+          hostPath:
+            path: /var/log/gpu-low-util-monitor
+            type: DirectoryOrCreate

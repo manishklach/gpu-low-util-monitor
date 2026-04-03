@@ -37,9 +37,13 @@ class CsvSummaryWriter:
         "window_seconds",
         "current_power_w",
         "power_cap_w",
+        "thermal_limit_active",
+        "power_limit_active",
         "low_util_pct_window",
         "idle_reason_pct_window",
         "idle_entries_window",
+        "thermal_limit_pct_window",
+        "power_limit_pct_window",
         "avg_gpu_util_window",
         "avg_sm_clock_mhz_window",
         "avg_mem_clock_mhz_window",
@@ -72,6 +76,8 @@ class CsvSummaryWriter:
                             "window_seconds": summary.window_seconds,
                             "current_power_w": report.sample.power_w,
                             "power_cap_w": report.sample.power_cap_w,
+                            "thermal_limit_active": report.sample.thermal_limit_active,
+                            "power_limit_active": report.sample.power_limit_active,
                             **summary.to_public_dict(),
                         }
                     )
@@ -96,6 +102,8 @@ class ConsoleReporter:
                     f"idle_pct_short({short_label})",
                     f"idle_pct_long({long_label})",
                     f"idle_entries_long({long_label})",
+                    f"thermal_pct_long({long_label})",
+                    f"power_limit_pct_long({long_label})",
                     "current_power_w",
                     f"avg_power_short({short_label})",
                     f"avg_power_long({long_label})",
@@ -117,6 +125,8 @@ class ConsoleReporter:
                         _fmt(report.short_summary.idle_reason_pct_window),
                         _fmt(report.long_summary.idle_reason_pct_window),
                         _fmt(report.long_summary.idle_entries_window),
+                        _fmt(report.long_summary.thermal_limit_pct_window),
+                        _fmt(report.long_summary.power_limit_pct_window),
                         _fmt(report.sample.power_w),
                         _fmt(report.short_summary.avg_power_w_window),
                         _fmt(report.long_summary.avg_power_w_window),
@@ -161,18 +171,24 @@ class HeatmapJsonWriter:
                             "window_role": "long",
                             "window_seconds": long_summary.window_seconds,
                             "current_power_w": report.sample.power_w,
+                            "thermal_limit_active": report.sample.thermal_limit_active,
+                            "power_limit_active": report.sample.power_limit_active,
                             "avg_power_w_window": long_summary.avg_power_w_window,
                             "power_activity_pct_window": long_summary.power_activity_pct_window,
                             "power_pct_of_cap_window": long_summary.power_pct_of_cap_window,
                             "low_util_pct_window": long_summary.low_util_pct_window,
                             "idle_reason_pct_window": long_summary.idle_reason_pct_window,
                             "idle_entries_window": long_summary.idle_entries_window,
+                            "thermal_limit_pct_window": long_summary.thermal_limit_pct_window,
+                            "power_limit_pct_window": long_summary.power_limit_pct_window,
                             "avg_power_w_long": long_summary.avg_power_w_window,
                             "power_activity_pct_long": long_summary.power_activity_pct_window,
                             "power_pct_of_cap_long": long_summary.power_pct_of_cap_window,
                             "low_util_pct_long": long_summary.low_util_pct_window,
                             "idle_reason_pct_long": long_summary.idle_reason_pct_window,
                             "idle_entries_long": long_summary.idle_entries_window,
+                            "thermal_limit_pct_long": long_summary.thermal_limit_pct_window,
+                            "power_limit_pct_long": long_summary.power_limit_pct_window,
                         }
                     )
                     + "\n"
@@ -206,10 +222,30 @@ class PrometheusExporter:
             "gpu_power_pct_of_cap": Gauge("gpu_power_pct_of_cap", "Rolling average power as a percentage of cap.", labels),
             "gpu_power_activity_pct": Gauge("gpu_power_activity_pct", "Rolling calibrated power-activity proxy.", labels),
             "gpu_energy_joules": Gauge("gpu_energy_joules", "Rolling energy accumulation in joules.", labels),
+            "gpu_thermal_limit_pct": Gauge(
+                "gpu_thermal_limit_pct",
+                "Rolling sampled percentage with a thermal-limit reason active.",
+                labels,
+            ),
+            "gpu_power_limit_pct": Gauge(
+                "gpu_power_limit_pct",
+                "Rolling sampled percentage with a power-limit reason active.",
+                labels,
+            ),
         }
         current_labels = ("gpu_index", "uuid", "name")
         self._current_power_gauge = Gauge("gpu_current_power_w", "Current GPU power draw in watts.", current_labels)
         self._power_cap_gauge = Gauge("gpu_power_cap_w", "Current GPU power cap in watts.", current_labels)
+        self._thermal_limit_active_gauge = Gauge(
+            "gpu_thermal_limit_active",
+            "Current sampled thermal-limit reason state.",
+            current_labels,
+        )
+        self._power_limit_active_gauge = Gauge(
+            "gpu_power_limit_active",
+            "Current sampled power-limit reason state.",
+            current_labels,
+        )
 
     def start(self) -> None:
         """Start the HTTP exporter."""
@@ -230,6 +266,10 @@ class PrometheusExporter:
                 self._current_power_gauge.labels(*current_labels).set(report.sample.power_w)
             if report.sample.power_cap_w is not None:
                 self._power_cap_gauge.labels(*current_labels).set(report.sample.power_cap_w)
+            if report.sample.thermal_limit_active is not None:
+                self._thermal_limit_active_gauge.labels(*current_labels).set(1 if report.sample.thermal_limit_active else 0)
+            if report.sample.power_limit_active is not None:
+                self._power_limit_active_gauge.labels(*current_labels).set(1 if report.sample.power_limit_active else 0)
             self._set_windowed_metrics(report, "short", report.short_summary)
             self._set_windowed_metrics(report, "long", report.long_summary)
 
@@ -251,6 +291,8 @@ class PrometheusExporter:
         self._set("gpu_power_pct_of_cap", labels, summary.power_pct_of_cap_window)
         self._set("gpu_power_activity_pct", labels, summary.power_activity_pct_window)
         self._set("gpu_energy_joules", labels, summary.energy_joules_window)
+        self._set("gpu_thermal_limit_pct", labels, summary.thermal_limit_pct_window)
+        self._set("gpu_power_limit_pct", labels, summary.power_limit_pct_window)
 
     def _set(self, name: str, labels: tuple[str, str, str, str, str], value: float | int | None) -> None:
         """Set a gauge when a value is available."""

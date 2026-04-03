@@ -95,6 +95,8 @@ class RollingWindow:
                 low_util_pct_window=None,
                 idle_reason_pct_window=None,
                 idle_entries_window=None,
+                thermal_limit_pct_window=None,
+                power_limit_pct_window=None,
                 avg_gpu_util_window=None,
                 avg_sm_clock_mhz_window=None,
                 avg_mem_clock_mhz_window=None,
@@ -160,8 +162,16 @@ class RollingWindow:
                 total_energy_joules += interval.total_energy_delta_joules * weight
 
         idle_states = [sample.idle_reason_active for sample in samples_in_window if sample.idle_reason_active is not None]
+        thermal_states = [
+            sample.thermal_limit_active for sample in samples_in_window if sample.thermal_limit_active is not None
+        ]
+        power_limit_states = [
+            sample.power_limit_active for sample in samples_in_window if sample.power_limit_active is not None
+        ]
         idle_reason_pct = None
         idle_entries = None
+        thermal_limit_pct = None
+        power_limit_pct = None
         if idle_states:
             idle_reason_pct = round(100.0 * sum(1 for value in idle_states if value) / len(idle_states), 3)
             idle_entries = 0
@@ -178,6 +188,13 @@ class RollingWindow:
                 if previous_state is False and state is True:
                     idle_entries += 1
                 previous_state = state
+        if thermal_states:
+            thermal_limit_pct = round(100.0 * sum(1 for value in thermal_states if value) / len(thermal_states), 3)
+        if power_limit_states:
+            power_limit_pct = round(
+                100.0 * sum(1 for value in power_limit_states if value) / len(power_limit_states),
+                3,
+            )
 
         low_util_pct = None
         if low_util_supported and total_elapsed_ns > 0:
@@ -195,6 +212,8 @@ class RollingWindow:
             low_util_pct_window=low_util_pct,
             idle_reason_pct_window=idle_reason_pct,
             idle_entries_window=idle_entries,
+            thermal_limit_pct_window=thermal_limit_pct,
+            power_limit_pct_window=power_limit_pct,
             avg_gpu_util_window=_safe_weighted_average(weighted_gpu_util, gpu_util_elapsed_ns),
             avg_sm_clock_mhz_window=_safe_weighted_average(weighted_sm_clock, sm_clock_elapsed_ns),
             avg_mem_clock_mhz_window=_safe_weighted_average(weighted_mem_clock, mem_clock_elapsed_ns),
