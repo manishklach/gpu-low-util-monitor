@@ -22,6 +22,8 @@ class DeviceCapabilities:
     low_util_counter: bool = True
     idle_reason: bool = True
     mem_clock: bool = True
+    power_cap: bool = True
+    total_energy: bool = True
 
     def to_dict(self) -> dict[str, bool]:
         """Return a stable JSON-serializable mapping."""
@@ -39,6 +41,8 @@ class DeviceSample:
     sm_clock_mhz: float | None
     mem_clock_mhz: float | None
     power_w: float | None
+    power_cap_w: float | None
+    total_energy_joules: float | None
     idle_reason_active: bool | None
     low_util_counter_ns: int | None
     capabilities: DeviceCapabilities
@@ -57,6 +61,9 @@ class WindowSummary:
     avg_sm_clock_mhz_window: float | None
     avg_mem_clock_mhz_window: float | None
     avg_power_w_window: float | None
+    power_pct_of_cap_window: float | None
+    energy_joules_window: float | None
+    power_activity_pct_window: float | None
 
     def to_public_dict(self) -> dict[str, Any]:
         """Return the summary fields intended for external output."""
@@ -68,6 +75,9 @@ class WindowSummary:
             "avg_sm_clock_mhz_window": self.avg_sm_clock_mhz_window,
             "avg_mem_clock_mhz_window": self.avg_mem_clock_mhz_window,
             "avg_power_w_window": self.avg_power_w_window,
+            "power_pct_of_cap_window": self.power_pct_of_cap_window,
+            "energy_joules_window": self.energy_joules_window,
+            "power_activity_pct_window": self.power_activity_pct_window,
         }
 
 
@@ -99,7 +109,10 @@ class SampleReport:
                 "gpu_util_pct": self.sample.gpu_util_pct,
                 "sm_clock_mhz": self.sample.sm_clock_mhz,
                 "mem_clock_mhz": self.sample.mem_clock_mhz,
+                "current_power_w": self.sample.power_w,
                 "power_w": self.sample.power_w,
+                "power_cap_w": self.sample.power_cap_w,
+                "total_energy_joules": self.sample.total_energy_joules,
                 "idle_reason_active": self.sample.idle_reason_active,
                 "low_util_counter_ns": self.sample.low_util_counter_ns,
             },

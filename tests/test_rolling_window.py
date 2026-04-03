@@ -16,6 +16,8 @@ def make_sample(
         sm_clock_mhz=1000.0,
         mem_clock_mhz=1500.0,
         power_w=200.0,
+        power_cap_w=700.0,
+        total_energy_joules=float(ts_ns / 1_000_000_000) * 200.0,
         idle_reason_active=idle,
         low_util_counter_ns=low_util_counter_ns,
         capabilities=DeviceCapabilities(),

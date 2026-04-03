@@ -6,6 +6,7 @@ from collections import deque
 from dataclasses import dataclass
 
 from gpu_low_util_monitor.models import DeviceSample, WindowSummary
+from gpu_low_util_monitor.power import PowerCalibration, compute_power_activity_pct, compute_power_pct_of_cap
 from gpu_low_util_monitor.util import clamp
 
 
@@ -21,6 +22,8 @@ class IntervalRecord:
     sm_clock_mhz: float | None
     mem_clock_mhz: float | None
     power_w: float | None
+    power_cap_w: float | None
+    total_energy_delta_joules: float | None
 
 
 class RollingWindow:
@@ -50,6 +53,11 @@ class RollingWindow:
                     sm_clock_mhz=sample.sm_clock_mhz,
                     mem_clock_mhz=sample.mem_clock_mhz,
                     power_w=sample.power_w,
+                    power_cap_w=sample.power_cap_w,
+                    total_energy_delta_joules=self._safe_nonnegative_delta(
+                        previous.total_energy_joules,
+                        sample.total_energy_joules,
+                    ),
                 )
             )
         self._samples.append(sample)
@@ -69,7 +77,16 @@ class RollingWindow:
         delta = current_counter_ns - previous_counter_ns
         return int(clamp(float(delta), 0.0, float(elapsed_ns)))
 
-    def summarize(self, window_seconds: int) -> WindowSummary:
+    @staticmethod
+    def _safe_nonnegative_delta(previous_value: float | None, current_value: float | None) -> float | None:
+        """Return a nonnegative cumulative delta or None when unavailable."""
+        if previous_value is None or current_value is None:
+            return None
+        if current_value < previous_value:
+            return 0.0
+        return current_value - previous_value
+
+    def summarize(self, window_seconds: int, calibration: PowerCalibration | None = None) -> WindowSummary:
         """Compute a rolling summary for a time-bounded window."""
         if not self._samples:
             return WindowSummary(
@@ -82,6 +99,9 @@ class RollingWindow:
                 avg_sm_clock_mhz_window=None,
                 avg_mem_clock_mhz_window=None,
                 avg_power_w_window=None,
+                power_pct_of_cap_window=None,
+                energy_joules_window=None,
+                power_activity_pct_window=None,
             )
 
         newest_ts = self._samples[-1].monotonic_ns
@@ -96,10 +116,14 @@ class RollingWindow:
         weighted_sm_clock = 0.0
         weighted_mem_clock = 0.0
         weighted_power = 0.0
+        weighted_power_cap = 0.0
+        total_energy_joules = 0.0
         gpu_util_elapsed_ns = 0
         sm_clock_elapsed_ns = 0
         mem_clock_elapsed_ns = 0
         power_elapsed_ns = 0
+        power_cap_elapsed_ns = 0
+        energy_supported = False
 
         for interval in self._intervals:
             if interval.end_ns <= cutoff_ns:
@@ -128,6 +152,12 @@ class RollingWindow:
             if interval.power_w is not None:
                 weighted_power += interval.power_w * overlap_ns
                 power_elapsed_ns += overlap_ns
+            if interval.power_cap_w is not None:
+                weighted_power_cap += interval.power_cap_w * overlap_ns
+                power_cap_elapsed_ns += overlap_ns
+            if interval.total_energy_delta_joules is not None:
+                energy_supported = True
+                total_energy_joules += interval.total_energy_delta_joules * weight
 
         idle_states = [sample.idle_reason_active for sample in samples_in_window if sample.idle_reason_active is not None]
         idle_reason_pct = None
@@ -156,6 +186,9 @@ class RollingWindow:
                 3,
             )
 
+        avg_power_w = _safe_weighted_average(weighted_power, power_elapsed_ns)
+        avg_power_cap_w = _safe_weighted_average(weighted_power_cap, power_cap_elapsed_ns)
+
         return WindowSummary(
             window_seconds=window_seconds,
             sample_count=len(samples_in_window),
@@ -165,7 +198,10 @@ class RollingWindow:
             avg_gpu_util_window=_safe_weighted_average(weighted_gpu_util, gpu_util_elapsed_ns),
             avg_sm_clock_mhz_window=_safe_weighted_average(weighted_sm_clock, sm_clock_elapsed_ns),
             avg_mem_clock_mhz_window=_safe_weighted_average(weighted_mem_clock, mem_clock_elapsed_ns),
-            avg_power_w_window=_safe_weighted_average(weighted_power, power_elapsed_ns),
+            avg_power_w_window=avg_power_w,
+            power_pct_of_cap_window=compute_power_pct_of_cap(avg_power_w, avg_power_cap_w),
+            energy_joules_window=round(total_energy_joules, 3) if energy_supported else None,
+            power_activity_pct_window=compute_power_activity_pct(avg_power_w, calibration),
         )
 
     def _evict(self, newest_ts: int) -> None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import socket
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,11 @@ def utc_now_iso() -> str:
 def dumps_compact_json(payload: dict[str, Any]) -> str:
     """Serialize JSON with stable compact formatting."""
     return json.dumps(payload, separators=(",", ":"), sort_keys=False)
+
+
+def hostname() -> str:
+    """Return the current host name for tagging exports."""
+    return socket.gethostname()
 
 
 def configure_logging(verbose: bool) -> None:

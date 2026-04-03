@@ -9,7 +9,14 @@ from pathlib import Path
 
 from gpu_low_util_monitor.collector import CollectorConfig, GPUCollector
 from gpu_low_util_monitor.nvml_adapter import FakeNVMLBackend, RealNVMLBackend
-from gpu_low_util_monitor.reporting import ConsoleReporter, CsvSummaryWriter, JsonlWriter, PrometheusExporter
+from gpu_low_util_monitor.power import load_power_calibration_store
+from gpu_low_util_monitor.reporting import (
+    ConsoleReporter,
+    CsvSummaryWriter,
+    HeatmapJsonWriter,
+    JsonlWriter,
+    PrometheusExporter,
+)
 from gpu_low_util_monitor.util import configure_logging
 
 LOGGER = logging.getLogger(__name__)
@@ -20,11 +27,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Monitor low-utilization time and idle-state behavior on NVIDIA datacenter GPUs.",
         epilog=(
-            "This tool measures low-utilization and idle-state behavior over time using documented "
-            "NVIDIA signals. It provides a practical proxy for GPU underuse, workload starvation, "
-            "or underfeeding, but it should not claim omniscient knowledge of economic waste or "
-            "all causes of low activity. The short and long windows are operator-configurable; "
-            "60 seconds and 1200 seconds are defaults, not fixed product semantics."
+            "This tool measures low-utilization, idle-state behavior, and power-based activity "
+            "over time using documented NVIDIA signals. It provides a practical proxy for GPU "
+            "underuse, workload starvation, underfeeding, or dark/dim GPUs, but it should not "
+            "claim omniscient knowledge of economic waste or all causes of low activity. The "
+            "short and long windows are operator-configurable; 60 seconds and 1200 seconds are "
+            "defaults, not fixed product semantics."
         ),
     )
     parser.add_argument("--interval", type=float, default=1.0, help="Polling interval in seconds.")
@@ -39,6 +47,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--prometheus-port", type=int, default=None, help="Serve current rolling summaries as Prometheus gauges.")
     parser.add_argument("--simulate", action="store_true", help="Use the fake NVML backend for local simulation.")
     parser.add_argument(
+        "--power-mode",
+        choices=("off", "raw", "calibrated"),
+        default="raw",
+        help="Choose whether power metrics are off, emitted as raw observability signals, or emitted with calibrated normalization.",
+    )
+    parser.add_argument("--idle-baseline-w", type=float, default=None, help="Optional idle-baseline power in watts for normalized power activity.")
+    parser.add_argument("--busy-reference-w", type=float, default=None, help="Optional busy-reference power in watts for normalized power activity.")
+    parser.add_argument("--power-calibration-file", type=Path, default=None, help="Optional JSON file with default and per-GPU power calibration overrides.")
+    parser.add_argument("--emit-heatmap-json", action="store_true", help="Write machine-friendly heatmap JSONL snapshots for later visualization.")
+    parser.add_argument("--heatmap-group-by", choices=("host", "gpu"), default="host", help="Grouping hint to include in heatmap JSONL snapshots.")
+    parser.add_argument("--no-power-normalization", action="store_true", help="Disable normalized power-activity output even if calibration is available.")
+    parser.add_argument(
         "--fail-on-unsupported",
         action="store_true",
         help="Fail immediately when an optional documented NVML field is unavailable.",
@@ -51,6 +71,12 @@ def main() -> int:
     args = build_parser().parse_args()
     configure_logging(args.verbose)
 
+    calibrations = load_power_calibration_store(
+        args.power_calibration_file,
+        cli_idle_baseline_w=args.idle_baseline_w,
+        cli_busy_reference_w=args.busy_reference_w,
+    )
+
     backend = FakeNVMLBackend() if args.simulate else RealNVMLBackend(fail_on_unsupported=args.fail_on_unsupported)
     collector = GPUCollector(
         backend=backend,
@@ -58,11 +84,15 @@ def main() -> int:
             interval_seconds=args.interval,
             window_short_seconds=args.window_short,
             window_long_seconds=args.window_long,
+            power_mode=args.power_mode,
+            power_calibrations=calibrations,
+            enable_power_normalization=args.power_mode == "calibrated" and not args.no_power_normalization,
         ),
     )
 
     jsonl_writer = JsonlWriter(args.out_dir) if args.jsonl else None
     csv_writer = CsvSummaryWriter(args.out_dir) if args.csv else None
+    heatmap_writer = HeatmapJsonWriter(args.out_dir, group_by=args.heatmap_group_by) if args.emit_heatmap_json else None
     console_reporter = ConsoleReporter()
     exporter = PrometheusExporter(args.prometheus_port) if args.prometheus_port else None
 
@@ -84,6 +114,8 @@ def main() -> int:
             reports = collector.poll_once()
             if jsonl_writer is not None:
                 jsonl_writer.write_reports(reports)
+            if heatmap_writer is not None:
+                heatmap_writer.write_reports(reports)
             if exporter is not None:
                 exporter.update(reports)
 

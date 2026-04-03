@@ -21,9 +21,11 @@ class UnsupportedIdleBackend:
             sm_clock_mhz=1000.0,
             mem_clock_mhz=None,
             power_w=150.0,
+            power_cap_w=None,
+            total_energy_joules=None,
             idle_reason_active=None,
             low_util_counter_ns=None,
-            capabilities=DeviceCapabilities(low_util_counter=False, idle_reason=False, mem_clock=False),
+            capabilities=DeviceCapabilities(low_util_counter=False, idle_reason=False, mem_clock=False, power_cap=False, total_energy=False),
         )
 
 

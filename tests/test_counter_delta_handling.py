@@ -11,6 +11,8 @@ def sample(ts_ns: int, counter_ns: int | None) -> DeviceSample:
         sm_clock_mhz=0.0,
         mem_clock_mhz=0.0,
         power_w=0.0,
+        power_cap_w=700.0,
+        total_energy_joules=float(ts_ns / 1_000_000_000),
         idle_reason_active=True,
         low_util_counter_ns=counter_ns,
         capabilities=DeviceCapabilities(low_util_counter=counter_ns is not None),

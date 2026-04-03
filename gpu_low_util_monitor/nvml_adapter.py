@@ -90,6 +90,8 @@ class RealNVMLBackend:
         sm_clock = None
         mem_clock = None
         power_w = None
+        power_cap_w = None
+        total_energy_joules = None
         idle_reason_active = None
         low_util_counter_ns = None
 
@@ -120,12 +122,38 @@ class RealNVMLBackend:
             power_w = None
 
         try:
+            power_cap_w = self._read_power_cap_w(handle)
+        except Exception as exc:
+            capabilities = DeviceCapabilities(
+                low_util_counter=capabilities.low_util_counter,
+                idle_reason=capabilities.idle_reason,
+                mem_clock=capabilities.mem_clock,
+                power_cap=False,
+                total_energy=capabilities.total_energy,
+            )
+            self._warn_unsupported(identity.index, "power_cap", exc)
+
+        try:
+            total_energy_joules = self._read_total_energy_joules(handle)
+        except Exception as exc:
+            capabilities = DeviceCapabilities(
+                low_util_counter=capabilities.low_util_counter,
+                idle_reason=capabilities.idle_reason,
+                mem_clock=capabilities.mem_clock,
+                power_cap=capabilities.power_cap,
+                total_energy=False,
+            )
+            self._warn_unsupported(identity.index, "total_energy", exc)
+
+        try:
             idle_reason_active = self._read_idle_reason(handle)
         except Exception as exc:
             capabilities = DeviceCapabilities(
                 low_util_counter=capabilities.low_util_counter,
                 idle_reason=False,
                 mem_clock=capabilities.mem_clock,
+                power_cap=capabilities.power_cap,
+                total_energy=capabilities.total_energy,
             )
             self._warn_unsupported(identity.index, "idle_reason", exc)
             idle_reason_active = None
@@ -137,6 +165,8 @@ class RealNVMLBackend:
                 low_util_counter=False,
                 idle_reason=capabilities.idle_reason,
                 mem_clock=capabilities.mem_clock,
+                power_cap=capabilities.power_cap,
+                total_energy=capabilities.total_energy,
             )
             self._warn_unsupported(identity.index, "low_util_counter", exc)
             low_util_counter_ns = None
@@ -149,6 +179,8 @@ class RealNVMLBackend:
             sm_clock_mhz=sm_clock,
             mem_clock_mhz=mem_clock,
             power_w=power_w,
+            power_cap_w=power_cap_w,
+            total_energy_joules=total_energy_joules,
             idle_reason_active=idle_reason_active,
             low_util_counter_ns=low_util_counter_ns,
             capabilities=capabilities,
@@ -196,6 +228,25 @@ class RealNVMLBackend:
         if idle_mask is None:
             raise UnsupportedFieldError("Idle reason bit constant is unavailable")
         return bool(mask & idle_mask)
+
+    def _read_power_cap_w(self, handle: object) -> float:
+        """Read the enforced or configured power cap in watts when available."""
+        pynvml = self._pynvml
+        assert pynvml is not None
+        if hasattr(pynvml, "nvmlDeviceGetEnforcedPowerLimit"):
+            return float(pynvml.nvmlDeviceGetEnforcedPowerLimit(handle)) / 1000.0
+        if hasattr(pynvml, "nvmlDeviceGetPowerManagementLimit"):
+            return float(pynvml.nvmlDeviceGetPowerManagementLimit(handle)) / 1000.0
+        raise UnsupportedFieldError("Power cap query API is unavailable")
+
+    def _read_total_energy_joules(self, handle: object) -> float:
+        """Read cumulative total energy consumption in joules when available."""
+        pynvml = self._pynvml
+        assert pynvml is not None
+        if not hasattr(pynvml, "nvmlDeviceGetTotalEnergyConsumption"):
+            raise UnsupportedFieldError("Total energy consumption API is unavailable")
+        # NVML documents this API in millijoules on supported platforms.
+        return float(pynvml.nvmlDeviceGetTotalEnergyConsumption(handle)) / 1000.0
 
     def _warn_unsupported(self, gpu_index: int, field_name: str, exc: Exception) -> None:
         """Warn once per GPU/field or raise in strict mode."""
@@ -253,6 +304,7 @@ class FakeNVMLBackend:
             self._state[scenario.identity.index] = {
                 "last_ts_ns": 0,
                 "low_util_counter_ns": 0,
+                "total_energy_joules": 0.0,
                 "phase": 0,
             }
 
@@ -274,15 +326,19 @@ class FakeNVMLBackend:
 
         metrics = self._simulate_metrics(scenario.kind, phase)
         low_util_counter_ns = int(state["low_util_counter_ns"]) + int(metrics["low_util_fraction"] * elapsed_ns)
+        total_energy_joules = float(state["total_energy_joules"]) + float(metrics["power_w"]) * elapsed_s
 
         state["last_ts_ns"] = monotonic_ns
         state["low_util_counter_ns"] = low_util_counter_ns
+        state["total_energy_joules"] = total_energy_joules
         state["phase"] = phase + max(1, round(elapsed_s))
 
         capabilities = DeviceCapabilities(
             low_util_counter=True,
             idle_reason=metrics["idle_reason_active"] is not None,
             mem_clock=metrics["mem_clock_mhz"] is not None,
+            power_cap=metrics["power_cap_w"] is not None,
+            total_energy=True,
         )
 
         return DeviceSample(
@@ -293,6 +349,8 @@ class FakeNVMLBackend:
             sm_clock_mhz=float(metrics["sm_clock_mhz"]) if metrics["sm_clock_mhz"] is not None else None,
             mem_clock_mhz=float(metrics["mem_clock_mhz"]) if metrics["mem_clock_mhz"] is not None else None,
             power_w=float(metrics["power_w"]) if metrics["power_w"] is not None else None,
+            power_cap_w=float(metrics["power_cap_w"]) if metrics["power_cap_w"] is not None else None,
+            total_energy_joules=total_energy_joules,
             idle_reason_active=bool(metrics["idle_reason_active"]) if metrics["idle_reason_active"] is not None else None,
             low_util_counter_ns=low_util_counter_ns,
             capabilities=capabilities,
@@ -307,6 +365,7 @@ class FakeNVMLBackend:
                 "sm_clock_mhz": 210.0,
                 "mem_clock_mhz": 405.0,
                 "power_w": 78.0,
+                "power_cap_w": 700.0,
                 "idle_reason_active": True,
                 "low_util_fraction": 1.0,
             }
@@ -316,6 +375,7 @@ class FakeNVMLBackend:
                 "sm_clock_mhz": 1830.0,
                 "mem_clock_mhz": 1593.0,
                 "power_w": 662.0,
+                "power_cap_w": 700.0,
                 "idle_reason_active": False,
                 "low_util_fraction": 0.02,
             }
@@ -325,6 +385,7 @@ class FakeNVMLBackend:
                 "sm_clock_mhz": 1590.0 if bursty_active else 210.0,
                 "mem_clock_mhz": 1593.0,
                 "power_w": 518.0 if bursty_active else 92.0,
+                "power_cap_w": 700.0,
                 "idle_reason_active": not bursty_active,
                 "low_util_fraction": 0.12 if bursty_active else 1.0,
             }
@@ -334,6 +395,7 @@ class FakeNVMLBackend:
                 "sm_clock_mhz": 960.0 + (phase % 4) * 40.0,
                 "mem_clock_mhz": 1593.0,
                 "power_w": 205.0 + (phase % 5) * 6.0,
+                "power_cap_w": 700.0,
                 "idle_reason_active": phase % 7 in (0, 1),
                 "low_util_fraction": 0.72,
             }
@@ -343,6 +405,7 @@ class FakeNVMLBackend:
                 "sm_clock_mhz": 1320.0,
                 "mem_clock_mhz": 1593.0,
                 "power_w": 698.0,
+                "power_cap_w": 700.0,
                 "idle_reason_active": False,
                 "low_util_fraction": 0.05,
             }
