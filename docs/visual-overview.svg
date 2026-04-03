@@ -1,61 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="gpu-low-util-monitor overview">
+<svg width="100%" viewBox="0 0 680 400" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0%" stop-color="#08101d"/>
-      <stop offset="100%" stop-color="#0b1020"/>
-    </linearGradient>
-    <linearGradient id="panel" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#17203f"/>
-      <stop offset="100%" stop-color="#111831"/>
-    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
   </defs>
-  <rect width="1280" height="720" fill="url(#bg)"/>
-  <text x="72" y="74" fill="#9bffcf" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="2">GPU LOW-UTILIZATION MONITORING</text>
-  <text x="72" y="128" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="800">
-    <tspan x="72" dy="0">Rolling-window observability for</tspan>
-    <tspan x="72" dy="46">dark, dim, and underfed GPUs</tspan>
-  </text>
 
-  <rect x="72" y="190" width="320" height="196" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
-  <text x="100" y="234" fill="#7cc4ff" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Signals In</text>
-  <text x="100" y="278" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">NVML or DCGM exporter</text>
-  <text x="100" y="314" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Low-utilization policy time</text>
-  <text x="100" y="346" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Idle-state sampling</text>
-  <text x="100" y="378" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Power and energy telemetry</text>
+  <!-- Label top -->
+  <text x="40" y="36" font-weight="500" style="fill:var(--color-text-info);letter-spacing:0.08em;font-size:11px;text-transform:uppercase;fill:rgb(50, 102, 173);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:11px;font-weight:500;text-anchor:start;dominant-baseline:auto">GPU low-utilization monitoring</text>
 
-  <rect x="478" y="190" width="324" height="196" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
-  <text x="506" y="234" fill="#7cc4ff" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Rolling Windows</text>
-  <text x="506" y="278" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">
-    <tspan x="506" dy="0">Configurable short and</tspan>
-    <tspan x="506" dy="28">long windows</tspan>
-  </text>
-  <text x="506" y="334" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Low-util percentage</text>
-  <text x="506" y="366" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Idle sampled percentage and entries</text>
-  <text x="506" y="398" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Power and thermal corroboration</text>
+  <!-- Title -->
+  <text x="40" y="64" font-size="20px" style="fill:rgb(20, 20, 19);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:start;dominant-baseline:auto">Rolling-window observability</text>
+  <text x="40" y="88" font-size="20px" style="fill:rgb(20, 20, 19);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:start;dominant-baseline:auto">for dark, dim, and underfed GPUs</text>
 
-  <rect x="888" y="190" width="320" height="196" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
-  <text x="916" y="234" fill="#7cc4ff" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Operator View</text>
-  <text x="916" y="278" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">
-    <tspan x="916" dy="0">Long-window low-util is</tspan>
-    <tspan x="916" dy="28">the headline KPI</tspan>
-  </text>
-  <text x="916" y="334" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Dark / dim / bright heuristics</text>
-  <text x="916" y="366" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Likely underfeeding or burstiness</text>
-  <text x="916" y="398" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Not a guaranteed root-cause engine</text>
+  <!-- Box 1: Signals In -->
+  <g onclick="sendPrompt('What signals does gpu-low-util-monitor collect?')" style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <rect x="40" y="114" width="180" height="154" rx="10" stroke-width="0.5" style="fill:rgb(225, 245, 238);stroke:rgb(15, 110, 86);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <text x="130" y="144" text-anchor="middle" dominant-baseline="central" style="fill:rgb(8, 80, 65);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:central">Signals in</text>
+    <line x1="56" y1="158" x2="204" y2="158" stroke-width="0.5" stroke="currentColor" opacity="0.3" style="fill:rgb(0, 0, 0);stroke:rgb(0, 0, 0);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.3;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <text x="130" y="178" text-anchor="middle" dominant-baseline="central" style="fill:rgb(15, 110, 86);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">NVML or DCGM exporter</text>
+    <text x="130" y="200" text-anchor="middle" dominant-baseline="central" style="fill:rgb(15, 110, 86);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Low-util policy time</text>
+    <text x="130" y="220" text-anchor="middle" dominant-baseline="central" style="fill:rgb(15, 110, 86);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Idle-state sampling</text>
+    <text x="130" y="240" text-anchor="middle" dominant-baseline="central" style="fill:rgb(15, 110, 86);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Power &amp; energy telemetry</text>
+  </g>
 
-  <path d="M392 288 L478 288" stroke="#7cc4ff" stroke-width="6" stroke-linecap="round"/>
-  <polygon points="478,288 460,278 460,298" fill="#7cc4ff"/>
-  <path d="M802 288 L888 288" stroke="#7cc4ff" stroke-width="6" stroke-linecap="round"/>
-  <polygon points="888,288 870,278 870,298" fill="#7cc4ff"/>
+  <!-- Arrow 1 -->
+  <line x1="224" y1="191" x2="248" y2="191" marker-end="url(#arrow)" style="fill:none;stroke:rgb(115, 114, 108);color:rgb(0, 0, 0);stroke-width:1.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
 
-  <rect x="72" y="456" width="1136" height="182" rx="24" fill="url(#panel)" stroke="#2a355d" stroke-width="2"/>
-  <text x="104" y="502" fill="#9bffcf" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">At a glance</text>
-  <text x="104" y="548" fill="#e8ecf8" font-family="Segoe UI, Arial, sans-serif" font-size="24">
-    <tspan x="104" dy="0">Standard monitoring can show a GPU as moderately busy while rolling windows reveal</tspan>
-    <tspan x="104" dy="34">high low-utilization time, repeated idle entries, and dim power.</tspan>
-  </text>
-  <text x="104" y="620" fill="#afbbd8" font-family="Segoe UI, Arial, sans-serif" font-size="23">
-    <tspan x="104" dy="0">That is the value proposition: not omniscient truth, but a practical observability layer</tspan>
-    <tspan x="104" dy="32">for NVIDIA H100, H200, and similar datacenter GPUs.</tspan>
-  </text>
+  <!-- Box 2: Rolling Windows -->
+  <g onclick="sendPrompt('How do the rolling windows work in gpu-low-util-monitor?')" style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <rect x="252" y="114" width="180" height="154" rx="10" stroke-width="0.5" style="fill:rgb(238, 237, 254);stroke:rgb(83, 74, 183);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <text x="342" y="144" text-anchor="middle" dominant-baseline="central" style="fill:rgb(60, 52, 137);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:central">Rolling windows</text>
+    <line x1="268" y1="158" x2="416" y2="158" stroke-width="0.5" stroke="currentColor" opacity="0.3" style="fill:rgb(0, 0, 0);stroke:rgb(0, 0, 0);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.3;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <text x="342" y="178" text-anchor="middle" dominant-baseline="central" style="fill:rgb(83, 74, 183);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Configurable short &amp; long</text>
+    <text x="342" y="200" text-anchor="middle" dominant-baseline="central" style="fill:rgb(83, 74, 183);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Low-util percentage</text>
+    <text x="342" y="220" text-anchor="middle" dominant-baseline="central" style="fill:rgb(83, 74, 183);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Idle sampled % &amp; entries</text>
+    <text x="342" y="240" text-anchor="middle" dominant-baseline="central" style="fill:rgb(83, 74, 183);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Power corroboration</text>
+  </g>
+
+  <!-- Arrow 2 -->
+  <line x1="436" y1="191" x2="460" y2="191" marker-end="url(#arrow)" style="fill:none;stroke:rgb(115, 114, 108);color:rgb(0, 0, 0);stroke-width:1.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Box 3: Operator View -->
+  <g onclick="sendPrompt('How do I interpret gpu-low-util-monitor output as an operator?')" style="fill:rgb(0, 0, 0);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <rect x="464" y="114" width="176" height="154" rx="10" stroke-width="0.5" style="fill:rgb(250, 236, 231);stroke:rgb(153, 60, 29);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <text x="552" y="144" text-anchor="middle" dominant-baseline="central" style="fill:rgb(113, 43, 19);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:middle;dominant-baseline:central">Operator view</text>
+    <line x1="480" y1="158" x2="624" y2="158" stroke-width="0.5" stroke="currentColor" opacity="0.3" style="fill:rgb(0, 0, 0);stroke:rgb(0, 0, 0);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.3;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <text x="552" y="178" text-anchor="middle" dominant-baseline="central" style="fill:rgb(153, 60, 29);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Long-window low-util KPI</text>
+    <text x="552" y="200" text-anchor="middle" dominant-baseline="central" style="fill:rgb(153, 60, 29);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Dark / dim / bright signal</text>
+    <text x="552" y="220" text-anchor="middle" dominant-baseline="central" style="fill:rgb(153, 60, 29);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Underfeeding or burstiness</text>
+    <text x="552" y="240" text-anchor="middle" dominant-baseline="central" style="fill:rgb(153, 60, 29);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Not a root-cause engine</text>
+  </g>
+
+  <!-- At a glance box -->
+  <rect x="40" y="294" width="600" height="88" rx="10" fill="var(--color-background-secondary)" stroke="var(--color-border-tertiary)" stroke-width="0.5" style="fill:rgb(245, 244, 237);stroke:rgba(31, 30, 29, 0.15);color:rgb(0, 0, 0);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <text x="56" y="320" dominant-baseline="central" style="fill:var(--color-text-info);fill:rgb(50, 102, 173);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:14px;font-weight:500;text-anchor:start;dominant-baseline:central">At a glance</text>
+  <text x="56" y="344" dominant-baseline="central" style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central">Standard monitoring can show a GPU as moderately busy while rolling windows reveal</text>
+  <text x="56" y="362" dominant-baseline="central" style="fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central">high low-util time, repeated idle entries, and dim power.</text>
+  <text x="56" y="376" dominant-baseline="central" style="fill:var(--color-text-secondary);fill:rgb(61, 61, 58);stroke:none;color:rgb(0, 0, 0);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:12px;font-weight:400;text-anchor:start;dominant-baseline:central">Practical observability for H100, H200, and similar datacenter GPUs — not omniscient truth.</text>
 </svg>
